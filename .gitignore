@@ -34,3 +34,4 @@ frontend/owner-portal/server/config/*.json
 frontend/college-portal/server/*.json
 frontend/college-portal/server/debug-*.js
 frontend/college-portal/server/test-*.js
+service-account.json
