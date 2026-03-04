@@ -1,13 +1,15 @@
-# STATE: Halo Bus Tracking
+# STATE: Phase 1 Complete - Root Cause Found
 
-## Current Status
-- [x] GSD Initialization
-- [x] Phase 2: Deep Rebranding (Verification) <!-- id: 5 -->
+## Current Position
+Entering Phase 2: Implementation & Fixes.
+
+## Major Discovery
+- **Root Cause:** Backend initialization logic in `firebase.js` is looking for `service-account.json` in the `server/` directory, but the file exists in the parent `college-portal/` directory.
+- **Consequence:** Backend falls back to Vercel Env Vars, which are likely still pointing to the old `live-bus-tracking-2ec59` project. This project lacks the data for `olentangy-schools`, causing 404s for buses and "User Not Found" for student logons.
 
 ## Architectural Decisions
-- New Package Name: `com.halobus.mobile`
-- New App Name: `Halo Bus`
-- Target: All references to "Halo Bus", "Halo Bus", "Halo Bus" to be removed.
+- Move service account files to their expected local paths.
+- Enforce Environment Variables as the primary source of truth for production (Vercel).
 
 ## Blockers
-- None at the moment. Proceeding with Phase 1 execution.
+- None. I have a clear path to fix.

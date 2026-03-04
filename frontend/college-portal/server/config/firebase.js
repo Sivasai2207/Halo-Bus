@@ -54,19 +54,21 @@ try {
     // 1. Try local JSON files first (for local development)
     for (const file of serviceAccountFiles) {
         const fullPath = path.join(__dirname, '..', file);
+        console.log(`[Firebase] Checking for service account at: ${fullPath}`);
         if (fs.existsSync(fullPath)) {
             try {
                 serviceAccount = require(fullPath);
-                console.log(`[Firebase] Using service account file: ${file}`);
+                console.log(`[Firebase] SUCCESS: Found and using ${file}`);
                 break;
             } catch (e) {
-                console.error(`[Firebase] Failed to load ${file}:`, e.message);
+                console.error(`[Firebase] ERROR: Failed to load ${file}:`, e.message);
             }
         }
     }
 
     // 2. Fallback to environment variables (for Vercel and production)
     if (!serviceAccount) {
+        console.log('[Firebase] Local files not found, attempting environment variables...');
         const projectId = (process.env.FIREBASE_PROJECT_ID || '').trim();
         const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || '').trim();
         const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY || '';

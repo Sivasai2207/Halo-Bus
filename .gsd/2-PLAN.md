@@ -1,44 +1,40 @@
-# 2-PLAN: Deep Rebranding
+# PLAN: Phase 2 - Implementation & Fixes
 
 <task type="auto">
-  <name>Scrub "Halo Bus" and "Halo Bus Track" from Frontend</name>
-  <files>frontend/owner-portal/src/**/*, frontend/college-portal/src/**/*, frontend/**/*.html</files>
+  <name>Relocate Service Account Files</name>
+  <files>frontend/college-portal/server/service-account.json, frontend/owner-portal/server/service-account.json</files>
   <action>
-    - Replace "Halo Bus Track" with "Halo Bus Track" (case sensitive).
-    - Replace "Halo Bus" with "Halo Bus" (case sensitive).
-    - Replace "halobus" with "halobus" (case sensitive).
+    The backend 'firebase.js' expects the service account in its parent directory (server/).
+    Current files are in 'frontend/college-portal/' and 'frontend/owner-portal/'.
+    1. Copy 'frontend/college-portal/service-account.json' to 'frontend/college-portal/server/service-account.json'.
+    2. Copy 'frontend/owner-portal/service-account.json' to 'frontend/owner-portal/server/service-account.json'.
   </action>
-  <verify>Run `grep -ri "Halo Bus" frontend`</verify>
-  <done>Frontend UI is completely rebranded to Halo Bus.</done>
+  <verify>Run 'ls' in both server directories to confirm files are present.</verify>
+  <done>Service account files are in the locations expected by the backend initialization logic.</done>
 </task>
 
 <task type="auto">
-  <name>Scrub "TransitHub" and "Bannu" remainders</name>
-  <files>Entire project</files>
+  <name>Improve Backend Initialization Logging</name>
+  <files>frontend/college-portal/server/config/firebase.js</files>
   <action>
-    - Run a final case-insensitive pass for "TransitHub" and "Bannu" across the whole repo.
+    Add explicit logging to 'firebase.js' to show:
+    1. Which file path it is checking for service account.
+    2. The project ID of the credential actually used.
   </action>
-  <verify>Run `grep -riE "transithub|bannu" .`</verify>
-  <done>No traces of previous internal names remain.</done>
+  <verify>Check console logs (or Vercel logs) for the new initialization messages.</verify>
+  <done>Backend clearly reports its connection status and project ID on startup.</done>
 </task>
 
 <task type="auto">
-  <name>Update Page Titles and Metadata</name>
-  <files>frontend/**/index.html, frontend/**/package.json</files>
+  <name>Generate Vercel Env Var Guide</name>
+  <files>NONE (Instructions for User)</files>
   <action>
-    - Ensure all `<title>` tags and `package.json` descriptions reflect "Halo Bus".
+    Provide the user with the exact values for:
+    - FIREBASE_PROJECT_ID
+    - FIREBASE_CLIENT_EMAIL
+    - FIREBASE_PRIVATE_KEY
+    This ensures that even if the JSON file is missing in Vercel (e.g. if it's gitignored), the backend still works.
   </action>
-  <verify>Check index.html files.</verify>
-  <done>Metadata is correctly rebranded.</done>
-</task>
-
-<task type="auto">
-  <name>Verify with Localhost</name>
-  <files>N/A</files>
-  <action>
-    - Start `frontend/owner-portal` again.
-    - Check the login page to confirm "Halo Bus" is gone and "Halo Bus" is present.
-  </action>
-  <verify>Browser screenshot of the login page.</verify>
-  <done>Visual verification of branding.</done>
+  <verify>User confirms they have updated Vercel environment variables.</verify>
+  <done>Production environment is correctly configured with Halo Bus credentials.</done>
 </task>

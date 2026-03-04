@@ -1,59 +1,40 @@
-# 1-PLAN: Identity & Package Renaming
+# PLAN: Phase 1 - Research & Diagnostics
 
 <task type="auto">
-  <name>Rename Flutter Project and App Name</name>
-  <files>mobile/pubspec.yaml, mobile/android/app/src/main/AndroidManifest.xml, mobile/ios/Runner/Info.plist</files>
+  <name>Audit Firestore Data Alignment</name>
+  <files>Firestore (audit via script)</files>
   <action>
-    - Update `name` in `mobile/pubspec.yaml` to `halobus`.
-    - Update `label` in `mobile/android/app/src/main/AndroidManifest.xml` to `Halo Bus`.
-    - Update `CFBundleName` and `CFBundleDisplayName` in `mobile/ios/Runner/Info.plist` to `Halo Bus`.
+    Run a diagnostic script to:
+    1. Find all students for college 'olentangy-schools'.
+    2. List their 'assignedBusId' and 'studentId' fields.
+    3. Find all buses for college 'olentangy-schools' and list their IDs.
+    4. Verify if student 'assignedBusId' actually exists in the 'buses' collection.
   </action>
-  <verify>Check files for updated strings.</verify>
-  <done>Flutter project and app display names are updated.</done>
+  <verify>Check script output for 'MISMATCH' or 'NOT FOUND' warnings.</verify>
+  <done>Verified that students are linked to valid, existing bus IDs within the same college.</done>
 </task>
 
 <task type="auto">
-  <name>Rename Android Package and Namespace</name>
-  <files>mobile/android/app/build.gradle, mobile/android/app/src/main/kotlin/com/bannu/mobile/mobile/MainActivity.kt</files>
+  <name>Trace Driver Student API Endpoint</name>
+  <files>frontend/college-portal/server/routes/driver.routes.js, frontend/college-portal/server/controllers/driverController.js</files>
   <action>
-    - Update `namespace` and `applicationId` in `mobile/android/app/build.gradle` to `com.halobus.mobile`.
-    - Move `MainActivity.kt` from `com.halobus.mobile.mobile` to `com.halobus.mobile` directory structure.
-    - Update `package` declaration in `MainActivity.kt`.
+    1. Examine the router definition to confirm the exact path for fetching students.
+    2. Check the controller 'getBusStudents' to see exactly how 'busId' is used in the query.
+    3. Look for any middleware that might be returning 404 before the controller is reached.
   </action>
-  <verify>Run `grep -r "com.halobus.mobile" mobile/android`</verify>
-  <done>Android package is renamed to com.halobus.mobile.</done>
+  <verify>Successful identification of the 404 source (Route mismatch vs. Controller logic vs. Middleware).</verify>
+  <done>Path and logic for fetching students is confirmed and aligns with mobile app requests.</done>
 </task>
 
 <task type="auto">
-  <name>Rename iOS Bundle Identifier</name>
-  <files>mobile/ios/Runner.xcodeproj/project.pbxproj</files>
+  <name>Simulate Student Login Backend Logic</name>
+  <files>frontend/college-portal/server/controllers/authController.js</files>
   <action>
-    - Search and replace `com.halobus.mobile.mobile` with `com.halobus.mobile` in `project.pbxproj`.
+    Run a script to simulate 'studentLogin' for 'prasad@gmail.com' and 'karthik@gmail.com' using the same logic as the controller.
+    1. Query Firestore for the student.
+    2. Check 'isFirstLogin' and 'registerNumber' comparison.
+    3. Check 'passwordHash' comparison if not first login.
   </action>
-  <verify>Check project.pbxproj for new bundle ID.</verify>
-  <done>iOS bundle identifier is updated.</done>
-</task>
-
-<task type="auto">
-  <name>Global Search and Replace - Brand Names</name>
-  <files>Entire codebase</files>
-  <action>
-    - Replace "Halo Bus" with "Halo Bus" (case sensitive where appropriate).
-    - Replace "Halo Bus" with "Halo Bus" or "halobus" (case sensitive).
-    - Replace "Halo Bus" with "Halo Bus" (case sensitive).
-  </action>
-  <verify>Run `grep -riE "bannu|prasad|transithub" .`</verify>
-  <done>No traces of old brand names remain in the codebase.</done>
-</task>
-
-<task type="auto">
-  <name>Update Firebase Configuration Placeholders</name>
-  <files>mobile/android/app/google-services.json, mobile/lib/firebase_options.dart</files>
-  <action>
-    - Update `package_name` in `google-services.json` to `com.halobus.mobile`.
-    - Update `iosBundleId` in `firebase_options.dart` to `com.halobus.mobile`.
-    - Note: User will need to provide actual new Firebase config files if they want it to connect to a new Firebase project.
-  </action>
-  <verify>Check files for updated package names.</verify>
-  <done>Firebase config placeholders reflect the new package names.</done>
+  <verify>Output results of simulated login (Success/Failure reason).</verify>
+  <done>Root cause of student login failure is identified (e.g., hash mismatch, missing field, or case sensitivity).</done>
 </task>

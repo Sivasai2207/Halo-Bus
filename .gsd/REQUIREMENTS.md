@@ -1,19 +1,11 @@
-# REQUIREMENTS: Halo Bus Rebranding
+# REQUIREMENTS: Driver Student Fetch & Student Login Fixes
 
-## Phase 1: Global Identity Reset (v1.0.0-halobus)
-- [ ] Rename all package/bundle identifiers from `com.halobus` to `com.halobus`.
-- [ ] Update `pubspec.yaml` and project name in Flutter.
-- [ ] Update Android `AndroidManifest.xml` and `build.gradle`.
-- [ ] Update iOS `Info.plist` and Build Settings.
-- [ ] Global search and replace for "Halo Bus", "Halo Bus", and "Halo Bus".
-- [ ] Update App Icons (Placeholder or request from user).
-- [ ] Update Firebase configuration files with new bundle IDs (Critical).
+## In-Scope (Phase 1)
+- **Fix Driver 404:** Resolve the issue where the driver app fails to fetch students (404 error).
+- **Fix Student Login:** Ensure students can log in using their registered email and register number (for first-time login) or password.
+- **Data Alignment:** Verify and correct any `collegeId` or `busId` mismatches in Firestore.
+- **Backend Verification:** Ensure the backend is correctly deployed and pointing to the `halo-bus` Firebase project.
 
-## Phase 2: Documentation & Cleanup
-- [ ] Refactor folder structures if they contain old names.
-- [ ] Update README and internal documentation.
-- [ ] Verify build and fix any broken imports due to package renaming.
-
-## Out of Scope
-- Functional feature additions (unless requested).
-- UI/UX redesign (beyond branding).
+## Out-of-Scope
+- New features (Route optimization, billing, etc.).
+- UI redesign.
