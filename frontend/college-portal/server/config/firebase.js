@@ -7,6 +7,7 @@ let auth = null;
 let initializationError = null;
 
 const serviceAccountFiles = [
+    'service-account.json',
     'live-bus-tracking-2ec59-firebase-adminsdk-fbsvc-c51ffbf7e4.json',
     'live-bus-tracking-2ec59-firebase-adminsdk-fbsvc-1dfd9cf3ef.json'
 ];

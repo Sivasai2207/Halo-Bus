@@ -29,9 +29,6 @@ class NotificationService {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      // ✅ FIX: This callback allows foreground notifications to show on iOS
-      // Without this, notifications don't appear when app is in foreground on iOS
-      onDidReceiveLocalNotification: _onDidReceiveLocalNotification,
     );
 
     const InitializationSettings settings = InitializationSettings(

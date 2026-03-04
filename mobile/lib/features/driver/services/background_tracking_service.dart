@@ -278,7 +278,7 @@ class IosLocationTracker {
     final Set<String> arrivingNotifiedIds = {};
 
     // ✅ KEY: AppleSettings with allowBackgroundLocationUpdates keeps GPS alive on screen lock
-    const locationSettings = AppleSettings(
+    final locationSettings = AppleSettings(
       accuracy: LocationAccuracy.high,
       activityType: ActivityType.automotiveNavigation,
       distanceFilter: 10,
