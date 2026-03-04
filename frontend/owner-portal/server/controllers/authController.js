@@ -17,7 +17,8 @@ const generateToken = (id, role, collegeId) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         if (initializationError) {
@@ -66,7 +67,8 @@ const loginUser = async (req, res) => {
 // @route   POST /api/auth/register-owner
 // @access  Public (Should ideally be protected by a secret)
 const registerOwner = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, password } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         if (initializationError) {

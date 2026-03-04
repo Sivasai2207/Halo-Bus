@@ -298,20 +298,21 @@ const createBulkUsers = async (req, res) => {
             }
 
             try {
+                const normalizedEmail = (user.email || '').toLowerCase().trim();
                 // Check if email exists in students collection
-                const studentSnapshot = await db.collection('students').where('email', '==', user.email).limit(1).get();
+                const studentSnapshot = await db.collection('students').where('email', '==', normalizedEmail).limit(1).get();
                 if (!studentSnapshot.empty) {
                     results.errors.push({ user, error: 'This email is already registered as a STUDENT.' });
                     continue;
                 }
                 // 1. Create in Firebase Auth first (for login compatibility)
                 const authUser = await admin.auth().createUser({
-                    email: user.email,
+                    email: normalizedEmail,
                     password: user.phone.toString(),
                     displayName: user.name
                 }).catch(async (err) => {
                     if (err.code === 'auth/email-already-exists') {
-                        return await admin.auth().getUserByEmail(user.email);
+                        return await admin.auth().getUserByEmail(normalizedEmail);
                     }
                     throw err;
                 });
@@ -324,7 +325,7 @@ const createBulkUsers = async (req, res) => {
                     userId,
                     collegeId: req.collegeId,
                     name: user.name,
-                    email: user.email,
+                    email: normalizedEmail,
                     phone: user.phone,
                     passwordHash,
                     role,
@@ -359,7 +360,8 @@ const createBulkUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-    const { name, email, password, phone, role } = req.body;
+    const { name, password, phone, role } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     if (!['DRIVER', 'STUDENT'].includes(role)) {
         return res.status(400).json({ message: 'Invalid role for college admin creation' });

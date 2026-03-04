@@ -10,10 +10,10 @@ const createCollege = async (req, res) => {
         address,
         slug,
         facultyName,
-        facultyEmail,
         password,
         phone
     } = req.body;
+    const facultyEmail = (req.body.facultyEmail || '').toLowerCase().trim();
 
     try {
         const collegesRef = db.collection('colleges');
@@ -132,7 +132,8 @@ const updateCollegeStatus = async (req, res) => {
 };
 
 const createCollegeAdmin = async (req, res) => {
-    const { collegeId, name, email, password, phone } = req.body;
+    const { collegeId, name, password, phone } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         const userQuery = await db.collection('users').where('email', '==', email).get();
@@ -168,7 +169,8 @@ const createCollegeAdmin = async (req, res) => {
 
 const updateCollegeAdmin = async (req, res) => {
     try {
-        const { name, email, phone, password } = req.body;
+        const { name, phone, password } = req.body;
+        const email = req.body.email ? req.body.email.toLowerCase().trim() : undefined;
         const userRef = db.collection('users').doc(req.params.id);
         const doc = await userRef.get();
 

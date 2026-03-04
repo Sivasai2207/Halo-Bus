@@ -20,7 +20,8 @@ const generateToken = (id, role, collegeId) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = async (req, res) => {
-    const { email, password, orgSlug } = req.body;
+    const { password, orgSlug } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         // -------------------------
@@ -166,7 +167,8 @@ const loginUser = async (req, res) => {
 // @route   POST /api/auth/register-owner
 // @access  Public (Should ideally be protected by a secret)
 const registerOwner = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, password } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         const usersRef = db.collection('users');
@@ -412,7 +414,8 @@ const searchColleges = async (req, res) => {
 // @route   POST /api/auth/student/login
 // @access  Public
 const studentLogin = async (req, res) => {
-    const { email, password, orgSlug } = req.body;
+    const { password, orgSlug } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
 
     try {
         // 1. Find college by slug
