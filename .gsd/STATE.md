@@ -1,15 +1,14 @@
-# STATE: Phase 1 Complete - Root Cause Found
+# STATE: Phase 2 Complete - Fixes Resonating
 
 ## Current Position
-Entering Phase 2: Implementation & Fixes.
+Phase 3: Verification & Handover.
 
-## Major Discovery
-- **Root Cause:** Backend initialization logic in `firebase.js` is looking for `service-account.json` in the `server/` directory, but the file exists in the parent `college-portal/` directory.
-- **Consequence:** Backend falls back to Vercel Env Vars, which are likely still pointing to the old `live-bus-tracking-2ec59` project. This project lacks the data for `olentangy-schools`, causing 404s for buses and "User Not Found" for student logons.
+## Completed Actions
+- Relocated `service-account.json` to `server/` directories in BOTH portals.
+- Enhanced `firebase.js` with explicit logging of paths and project IDs.
+- Pushed all changes to GitHub.
 
-## Architectural Decisions
-- Move service account files to their expected local paths.
-- Enforce Environment Variables as the primary source of truth for production (Vercel).
-
-## Blockers
-- None. I have a clear path to fix.
+## Next Steps
+- User must redeploy to Vercel.
+- User should update Vercel environment variables (Guide provided in chat).
+- Verify student login and driver fetch in the app.
