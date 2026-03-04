@@ -1,78 +1,109 @@
 const admin = require('firebase-admin');
-const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
-dotenv.config();
+let db = null;
+let auth = null;
+let initializationError = null;
 
-// Initialize Firebase Admin with Service Account from Individual Environment Variables
-// This approach is more reliable for deployment platforms like Vercel
-// where JSON strings with newlines can be problematic.
+const serviceAccountFiles = [
+    'service-account.json',
+    'halo-bus-firebase-adminsdk-fbsvc-464522caa6.json'
+];
 
 /**
  * Bulletproof private key parser.
  * Handles ALL formats:
  *   - Vercel: stores the key with real newlines (no escaping needed)
  *   - .env files: stores the key with literal \n that need replacing
+ *   - Quoted keys: wrapped in " or '
+ *   - Garbage text after the closing -----END PRIVATE KEY----- marker
  */
 function parsePrivateKey(raw) {
     if (!raw) return null;
+
     let key = raw.trim();
+
+    // Strip surrounding quotes if present
     if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
         key = key.slice(1, -1);
     }
+
+    // Convert literal \n (from .env files) to real newlines
     key = key.replace(/\\n/g, '\n');
+
+    // Extract only the valid PEM block and discard any garbage before/after
     const beginTag = '-----BEGIN PRIVATE KEY-----';
     const endTag = '-----END PRIVATE KEY-----';
     const startIdx = key.indexOf(beginTag);
     const endIdx = key.indexOf(endTag);
-    if (startIdx === -1 || endIdx === -1) return null;
-    return key.substring(startIdx, endIdx + endTag.length).trim() + '\n';
+
+    if (startIdx === -1 || endIdx === -1) {
+        console.error('[Firebase] Private key is missing BEGIN/END tags');
+        return null;
+    }
+
+    // Trim to just the valid PEM content
+    key = key.substring(startIdx, endIdx + endTag.length).trim() + '\n';
+
+    return key;
 }
 
 try {
     let serviceAccount = null;
-    const path = require('path');
-    const fs = require('fs');
 
-    // 1. Try local JSON file first
-    const serviceAccountPath = path.join(__dirname, '..', '..', 'service-account.json');
-    if (fs.existsSync(serviceAccountPath)) {
-        try {
-            serviceAccount = require(serviceAccountPath);
-            console.log('[Firebase] Using local service-account.json');
-        } catch (e) {
-            console.error('[Firebase] Failed to load local service-account.json:', e.message);
+    // 1. Try local JSON files first (for local development)
+    for (const file of serviceAccountFiles) {
+        const fullPath = path.join(__dirname, '..', '..', file);
+        if (fs.existsSync(fullPath)) {
+            try {
+                serviceAccount = require(fullPath);
+                console.log(`[Firebase] Using service account file: ${file}`);
+                break;
+            } catch (e) {
+                console.error(`[Firebase] Failed to load ${file}:`, e.message);
+            }
         }
     }
 
-    // 2. Fallback to individual environment variables
+    // 2. Fallback to environment variables (for Vercel and production)
     if (!serviceAccount) {
-        const projectId = process.env.FIREBASE_PROJECT_ID;
-        const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
-        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+        const projectId = (process.env.FIREBASE_PROJECT_ID || '').trim();
+        const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || '').trim();
+        const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY || '';
 
-        if (projectId && privateKeyRaw && clientEmail) {
+        if (projectId && clientEmail && privateKeyRaw) {
             const privateKey = parsePrivateKey(privateKeyRaw);
-            serviceAccount = { projectId, privateKey, clientEmail };
-            console.log('[Firebase] Using environment variable credentials');
+            if (privateKey) {
+                serviceAccount = { projectId, clientEmail, privateKey };
+                console.log('[Firebase] Using environment variable credentials');
+            } else {
+                throw new Error('FIREBASE_PRIVATE_KEY is present but could not be parsed as a valid PEM key');
+            }
         }
     }
 
     if (!serviceAccount) {
-        console.warn('Missing Firebase environment variables and local service-account.json not found.');
+        throw new Error('Missing Firebase Admin configuration: no JSON file and no valid environment variables found');
     }
 
-    if (serviceAccount && !admin.apps.length) {
+    if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
-        console.log(`Firebase Admin Initialized - Project: ${serviceAccount.project_id || serviceAccount.projectId}`);
+        console.log(`[Firebase] Successfully initialized for project: ${serviceAccount.project_id || serviceAccount.projectId}`);
     }
+
+    db = admin.firestore();
+    auth = admin.auth();
 } catch (error) {
-    console.error("Firebase Initialization Error:", error.message);
-    process.exit(1);
+    initializationError = error;
+    console.error('[Firebase Init Error]', error.message);
 }
 
-const db = admin.firestore();
-const auth = admin.auth();
-
-module.exports = { admin, db, auth };
+module.exports = {
+    admin,
+    db,
+    auth,
+    initializationError
+};

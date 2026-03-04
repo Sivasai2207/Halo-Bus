@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { db, admin } = require('../config/firebase');
+const { db, admin, initializationError } = require('../config/firebase');
 
 // Helper to validate password since Mongoose method is gone
 const matchPassword = async (enteredPassword, passwordHash) => {
@@ -20,6 +20,11 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        if (initializationError) {
+            console.error("[Firebase Init Error Check]", initializationError.message);
+            return res.status(500).json({ message: "Database initialization failed: " + initializationError.message });
+        }
+
         // Firestore query: users collection, where email == email
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('email', '==', email).limit(1).get();
@@ -64,12 +69,21 @@ const registerOwner = async (req, res) => {
     const { name, email, password } = req.body;
 
     try {
+        if (initializationError) {
+            console.error("[Firebase Init Error Check]", initializationError.message);
+            return res.status(500).json({ message: "Database initialization failed: " + initializationError.message });
+        }
+
         const usersRef = db.collection('users');
+        console.log(`[Register] Checking if user exists: ${email}`);
         const snapshot = await usersRef.where('email', '==', email).get();
 
         if (!snapshot.empty) {
+            console.log(`[Register] User already exists: ${email}`);
             return res.status(400).json({ message: 'User already exists' });
         }
+
+        console.log(`[Register] Creating new user ID and hashing password`);
 
         const userId = 'owner-' + Date.now();
         const salt = await bcrypt.genSalt(10);
@@ -85,7 +99,9 @@ const registerOwner = async (req, res) => {
             createdAt: new Date().toISOString(),
         };
 
+        console.log(`[Register] Saving user to Firestore: ${userId}`);
         await usersRef.doc(userId).set(newUser);
+        console.log(`[Register] User saved successfully: ${userId}`);
 
         res.status(201).json({
             _id: userId,
