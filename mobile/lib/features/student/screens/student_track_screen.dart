@@ -492,8 +492,15 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
         if (index < currentIndex) {
           status = "COMPLETED"; // Failsafe
         } else if (index == currentIndex) {
-          // Only show Arriving if location exists
-          status = (_currentBus?.location != null && distM <= 804) ? "ARRIVING" : "NEXT";
+          // R-4 FIX: Check currentBus status first (Source of Truth)
+          final busStatus = _currentBus?.currentStatus;
+          if (busStatus == "ARRIVED") {
+            status = "ARRIVED";
+          } else if (busStatus == "ARRIVING" || (_currentBus?.location != null && distM <= 804)) {
+            status = "ARRIVING";
+          } else {
+            status = "NEXT";
+          }
         } else {
           status = "NEXT";
         }

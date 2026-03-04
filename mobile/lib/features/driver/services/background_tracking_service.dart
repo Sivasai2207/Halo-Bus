@@ -598,8 +598,9 @@ class BackgroundTrackingService {
     double stopRadius,
     bool hasArrived,
   ) {
+  ) {
     if (hasArrived || distToStop <= stopRadius) {
-      return {'mode': 'NEAR_STOP', 'status': 'AT_STOP'};
+      return {'mode': 'NEAR_STOP', 'status': 'ARRIVED'};
     } else if (distToStop <= _ARRIVING_DISTANCE_M) {
       return {'mode': 'NEAR_STOP', 'status': 'ARRIVING'};
     } else {
@@ -626,6 +627,12 @@ class BackgroundTrackingService {
         'stopProgress.arrivedStopIds': FieldValue.arrayUnion([stopId]),
         'stopProgress.stops.$stopId.status': 'ARRIVED',
         'stopProgress.stops.$stopId.arrivedAt': FieldValue.serverTimestamp(),
+      });
+
+      // R-1 FIX: Update the 'buses' collection so Admin Panel shows Green immediately
+      await db.collection('buses').doc(busId).update({
+        'currentStatus': 'ARRIVED',
+        'lastUpdated': DateTime.now().toIso8601String(),
       });
 
       _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", 
@@ -673,10 +680,17 @@ class BackgroundTrackingService {
 
         await prefs.setDouble('next_stop_lat', (nextStop['lat'] as num).toDouble());
         await prefs.setDouble('next_stop_lng', (nextStop['lng'] as num).toDouble());
-        await prefs.setString('next_stop_id', nextStop['id'] as String? ?? '');
+        await prefs.setString('next_stop_id', nextStop['stopId'] as String? ?? nextStop['id'] as String? ?? '');
         await prefs.setString('next_stop_name', nextStop['name'] as String? ?? 'Stop');
         await prefs.setDouble('next_stop_radius', (nextStop['radiusM'] as num?)?.toDouble() ?? 100.0);
         await prefs.setBool('has_arrived_current', false);
+
+        // R-2 FIX: Reset bus status to ON_ROUTE when moving to next stop
+        await db.collection('buses').doc(busId).update({
+          'currentStatus': 'ON_ROUTE',
+          'nextStopId': nextStop['stopId'] ?? nextStop['id'],
+          'lastUpdated': DateTime.now().toIso8601String(),
+        });
 
         debugPrint("[Tracker] Auto-advanced to stop: ${nextStop['name']}");
       } else {
@@ -780,11 +794,18 @@ class BackgroundTrackingService {
           'next_stop_lat', (nextStop['lat'] as num).toDouble());
       await prefs.setDouble(
           'next_stop_lng', (nextStop['lng'] as num).toDouble());
-      await prefs.setString('next_stop_id', nextStop['id'] as String? ?? '');
+      await prefs.setString('next_stop_id', nextStop['stopId'] as String? ?? nextStop['id'] as String? ?? '');
       await prefs.setString(
           'next_stop_name', nextStop['name'] as String? ?? 'Stop');
       await prefs.setBool('has_arrived_current', false);
       await prefs.remove('skip_warned_stop');
+
+      // R-3 FIX: Reset bus status to ON_ROUTE when skipping
+      await db.collection('buses').doc(busId).update({
+        'currentStatus': 'ON_ROUTE',
+        'nextStopId': nextStop['stopId'] ?? nextStop['id'],
+        'lastUpdated': DateTime.now().toIso8601String(),
+      });
 
       final stopName = (progress['stops'] as Map?)?[stopId]?['name'] ?? 
                       (stops[currentIndex] as Map?)?['name'] ?? 'Stop';

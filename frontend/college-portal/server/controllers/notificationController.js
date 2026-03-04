@@ -377,22 +377,33 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
         }
 
         // Build notification text
+        // Fetch Bus Details for Name (Fix 3: User requested bus name in notification)
+        let busName = 'Your Bus';
+        try {
+            const busDoc = await db.collection('buses').doc(busId).get();
+            if (busDoc.exists) {
+                busName = busDoc.data().busNumber || busDoc.data().number || 'Your Bus';
+            }
+        } catch (busErr) {
+            console.error(`[StopEvent] Bus Fetch Error:`, busErr.message);
+        }
+
         let title, body;
         const displayLocation = stopName || stopAddress || 'your stop';
         if (type === 'ARRIVING') {
             title = 'Bus Arriving Soon 🚍';
-            body = `${displayLocation}, Arriving Soon`;
+            body = `${busName} is arriving soon at ${displayLocation}`;
         } else if (type === 'ARRIVED') {
             title = 'Bus Arrived ✅';
-            body = `Bus has arrived at ${displayLocation}`;
+            body = `${busName} has arrived at ${displayLocation}`;
         } else if (type === 'SKIPPED') {
             title = 'Stop Skipped ⏭';
-            body = `Bus skipped ${displayLocation} — heading to next stop`;
+            body = `${busName} skipped ${displayLocation} — heading to next stop`;
         } else if (type === 'COMPLETED') {
             title = 'Stop Completed ✅';
-            body = `Bus has departed ${displayLocation}`;
+            body = `${busName} has departed ${displayLocation}`;
         } else {
-            console.warn(`[StopEvent] Unsupported type: ${type}`);
+            console.log(`[StopEvent] Unsupported type: ${type}`);
             return;
         }
 
