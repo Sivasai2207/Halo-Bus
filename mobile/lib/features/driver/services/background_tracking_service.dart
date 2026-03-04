@@ -181,7 +181,7 @@ void onStart(ServiceInstance service) async {
               prefs, collegeId, busId, tripId, nextStopId, position, distToNextStop);
         }
 
-        if (newStatus == 'ARRIVING' &&
+        if ((newStatus == 'ARRIVING' || newStatus == 'AT_STOP') &&
             !arrivingNotifiedIds.contains(nextStopId)) {
           arrivingNotifiedIds.add(nextStopId);
           BackgroundTrackingService._notifyServer(
@@ -820,16 +820,18 @@ class BackgroundTrackingService {
         return;
       }
 
+      debugPrint("[Tracker] NOTIFY SERVER: $eventType for stop $stopName (ID: $stopId) on trip $tripId");
+      
       final dio = Dio();
-      await dio.post(
+      final response = await dio.post(
         '${Env.apiUrl}/api/driver/stop-event',
         data: {
           'tripId': tripId,
           'busId': busId,
           'collegeId': collegeId,
           'stopId': stopId,
-          'type': eventType, // Canonical backend field
-          'eventType': eventType, // Backward compat
+          'type': eventType,
+          'eventType': eventType,
           'stopName': stopName,
           'timestamp': DateTime.now().toIso8601String(),
         },
@@ -839,7 +841,7 @@ class BackgroundTrackingService {
           receiveTimeout: const Duration(seconds: 10),
         ),
       );
-      debugPrint("[Tracker] Server notified: $eventType for stop $stopId");
+      debugPrint("[Tracker] Server notified successfully: ${response.statusCode} for $eventType");
     } catch (e) {
       debugPrint("[Tracker] _notifyServer failed (non-fatal): $e");
     }

@@ -396,6 +396,23 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
             return;
         }
 
+        // PERSIST: Add to stopArrivals collection so Student App listeners can see it
+        try {
+            await db.collection('stopArrivals').add({
+                tripId,
+                busId,
+                collegeId,
+                stopId,
+                stopName: displayLocation,
+                type,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            });
+            console.log(`[StopEvent] Persisted ${type} for stop ${stopId} to stopArrivals`);
+        } catch (dbErr) {
+            console.error(`[StopEvent] DB Persistence Error:`, dbErr.message);
+        }
+
         // Identify target students
         const studentDocsMap = new Map();
         const studentsRef = db.collection('students');
