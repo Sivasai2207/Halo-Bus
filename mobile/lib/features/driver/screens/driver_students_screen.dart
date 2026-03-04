@@ -63,7 +63,11 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
     String? direction = forcedDirection;
     if (direction == null) {
       final tripData = ref.read(tripProvider(activeTripId)).value;
-      direction = tripData?['direction'];
+      if (tripData == null) {
+        debugPrint('[DriverStudentsScreen] Trip data not ready, skipping sync.');
+        return; 
+      }
+      direction = tripData['direction'];
     }
     final effectiveDirection = direction ?? 'pickup';
 

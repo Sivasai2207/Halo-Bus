@@ -1436,6 +1436,8 @@ const getAttendance = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Organization ID is required' });
         }
 
+        console.log(`[getAttendance] Request for college: ${collegeId}, busId: ${busId}, date: ${date}, direction: ${direction}, tz: ${req.query.timezone}`);
+
         let query = db.collection('attendance')
             .where('collegeId', '==', collegeId);
 
@@ -1451,8 +1453,10 @@ const getAttendance = async (req, res) => {
             query = query.where('direction', '==', direction);
         }
 
-        // Fetch snapshot (in-memory filtering avoids complex composite indexes)
+        // Fetch snapshot
         const snapshot = await query.get();
+        console.log(`[getAttendance] Found ${snapshot.size} total docs for college ${collegeId} before date filter.`);
+
         let attendanceObjects = snapshot.docs.map(doc => {
             const data = doc.data();
             return {

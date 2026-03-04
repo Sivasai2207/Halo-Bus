@@ -786,8 +786,11 @@ class BackgroundTrackingService {
       await prefs.setBool('has_arrived_current', false);
       await prefs.remove('skip_warned_stop');
 
+      final stopName = (progress['stops'] as Map?)?[stopId]?['name'] ?? 
+                      (stops[currentIndex] as Map?)?['name'] ?? 'Stop';
+
       _notifyServer(tripId, busId, collegeId, stopId, "SKIPPED",
-          stopName: data['stops']?[stopId]?['name'] ?? '',
+          stopName: stopName,
           prefs: prefs);
 
       service.invoke('update', {

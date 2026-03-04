@@ -1,4 +1,4 @@
-# ROADMAP: 30-Minute Critical Fix Sprint
+# ROADMAP: Global Trip Fix & Attendance Sync
 
 ## Phase 1: Research & Trace (10 mins)
 - [ ] Trace 'Skip' action from Mobile App to Backend.

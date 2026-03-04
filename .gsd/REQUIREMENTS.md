@@ -1,12 +1,12 @@
-# REQUIREMENTS: Trip Logic & Notification Fixes
+# REQUIREMENTS: Global Trip Fix & Attendance Sync
 
 ## In-Scope
-- **Notification Fixes:** Ensure 'Arriving', 'Arrived', and 'Skipped' notifications are sent to students.
-- **Skip Logic:** Fix 'Skip' button to correctly update Firestore and notify students.
-- **End-Trip Alerts:** Implement 'Not Boarded' (Absent) notifications at the end of the trip for all students not marked as attended.
-- **Proximity Automation:** Auto-mark stops as 'Completed' when the bus leaves the stop radius or crosses the point.
-- **Visual Feedback:** Correctly show ticks/status in the Student app's trip progress.
+- **Notification Reliability:** Fix 'Arriving', 'Arrived', and 'Skipped' notification delivery.
+- **Student App UX:** Resolve "Stops List" not loading on first open of the tracking screen.
+- **State Synchronization:** Ensure "Completed" stops stay completed and upcoming stops update correctly after a skip.
+- **Attendance Isolation:** Separate Pickup and Dropoff attendance records completely (independent cycles).
+- **Admin Visibility:** Restore Attendance Reporting in the College Portal (Admin Panel).
 
 ## Out-of-Scope
-- UI refactoring.
-- New reporting features.
+- Major UI redesigns.
+- Adding new user roles.

@@ -398,11 +398,11 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
 
         // Identify target students
         const studentDocsMap = new Map();
+        const studentsRef = db.collection('students');
 
         if (Array.isArray(targetStudentIds) && targetStudentIds.length > 0) {
             console.log(`[StopEvent] Targeted query for ${targetStudentIds.length} specific students`);
-            // Fetch students by ID directly
-            const studentPromises = targetStudentIds.map(id => db.collection('students').doc(id).get());
+            const studentPromises = targetStudentIds.map(id => studentsRef.doc(id).get());
             const studentDocs = await Promise.all(studentPromises);
             studentDocs.forEach(doc => {
                 if (doc.exists && doc.data().collegeId === collegeId) {
@@ -410,8 +410,6 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
                 }
             });
         } else {
-            // Standard broadcast logic (Assigned students + Favorited students)
-            const studentsRef = db.collection('students');
             const [assignedSnap, favoriteSnap] = await Promise.all([
                 studentsRef.where('assignedBusId', '==', busId).get(),
                 studentsRef.where('favoriteBusIds', 'array-contains', busId).get()
