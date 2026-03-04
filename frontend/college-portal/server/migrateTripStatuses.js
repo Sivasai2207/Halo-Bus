@@ -3,12 +3,12 @@ const path = require('path');
 require('dotenv').config();
 
 // Initialize Firebase
-const serviceAccountPath = path.join(__dirname, 'live-bus-tracking-2ec59-firebase-adminsdk-fbsvc-c51ffbf7e4.json');
+const serviceAccountPath = path.join(__dirname, '..', 'service-account.json');
 try {
     admin.initializeApp({
         credential: admin.credential.cert(require(serviceAccountPath))
     });
-    console.log('[Migration] Firebase Admin initialized.');
+    console.log('[Migration] Firebase Admin initialized using service-account.json');
 } catch (e) {
     console.error('[Migration] Failed to initialize Firebase:', e.message);
     process.exit(1);

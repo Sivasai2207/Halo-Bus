@@ -7,8 +7,7 @@ let auth = null;
 let initializationError = null;
 
 const serviceAccountFiles = [
-    'service-account.json',
-    'halo-bus-firebase-adminsdk-fbsvc-464522caa6.json'
+    'service-account.json'
 ];
 
 /**

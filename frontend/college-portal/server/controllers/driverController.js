@@ -931,6 +931,8 @@ const getTodayAttendance = async (req, res) => {
             .where('direction', '==', direction) // Hardened: DB-level filter
             .get();
 
+        console.log(`[getTodayAttendance] Found ${attendanceSnapshot.size} potential records for bus: ${busId}, direction: ${direction}, college: ${req.collegeId}`);
+
         const studentIds = attendanceSnapshot.docs
             .filter(doc => {
                 const data = doc.data();
@@ -987,11 +989,13 @@ const getBusStudents = async (req, res) => {
         const busDoc = await busRef.get();
 
         if (!busDoc.exists) {
-            return res.status(404).json({ success: false, message: 'Bus not found' });
+            console.warn(`[getBusStudents] Bus NOT FOUND in Firestore: "${busId}" (Requested by: ${req.user.email})`);
+            return res.status(404).json({ success: false, message: `Bus not found: ${busId}` });
         }
 
         const busData = busDoc.data();
         if (busData.collegeId !== collegeId) {
+            console.warn(`[getBusStudents] College Mismatch for bus ${busId}: Bus College: ${busData.collegeId} vs Request College: ${collegeId}`);
             return res.status(403).json({ success: false, message: 'Access denied: College mismatch' });
         }
 

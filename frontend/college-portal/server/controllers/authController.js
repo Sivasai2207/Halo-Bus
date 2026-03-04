@@ -108,10 +108,12 @@ const loginUser = async (req, res) => {
         if (!studentSnapshot.empty) {
             const studentDoc = studentSnapshot.docs[0];
             const student = studentDoc.data();
+            console.log(`[Login] Found student: ${student.email} (ID: ${student.studentId})`);
 
             // Check College Status for student
             const collegeDoc = await db.collection('colleges').doc(student.collegeId).get();
             if (collegeDoc.exists && collegeDoc.data().status === 'SUSPENDED') {
+                console.warn(`[Login] Blocking student ${student.email}: College ${student.collegeId} is SUSPENDED`);
                 return res.status(403).json({ message: 'Your organization account is suspended.' });
             }
 
@@ -120,18 +122,24 @@ const loginUser = async (req, res) => {
 
             if (isFirstLogin || !student.passwordHash) {
                 // First login: password should match registerNumber (harden with String/trim)
+                console.log(`[Login] Student first login check for ${student.email}. RegisterNumber: ${student.registerNumber}`);
                 if (String(password).trim() === String(student.registerNumber || '').trim()) {
                     isValid = true;
+                } else {
+                    console.warn(`[Login] First login password mismatch for ${student.email}. Entered: ${password}, Expected: ${student.registerNumber}`);
                 }
             } else {
                 // Subsequent login
                 if (await matchPassword(password, student.passwordHash)) {
                     isValid = true;
                     isFirstLogin = false; // Confirm it's not first login flow effectively
+                } else {
+                    console.warn(`[Login] Subsequent login password mismatch for ${student.email}`);
                 }
             }
 
             if (isValid) {
+                console.log(`[Login] Student ${student.email} verified successfully.`);
                 const firebaseCustomToken = await auth.createCustomToken(student.studentId, {
                     role: 'STUDENT',
                     collegeId: student.collegeId
@@ -155,6 +163,7 @@ const loginUser = async (req, res) => {
             }
         }
 
+        console.warn(`[Login] User not found or invalid password for: ${email}`);
         return res.status(401).json({ message: 'Invalid email or password' });
 
     } catch (error) {
@@ -333,7 +342,7 @@ const getCollegeBySlug = async (req, res) => {
 // @route   GET /api/auth/health/firebase
 // @access  Public
 const getFirebaseHealth = async (req, res) => {
-    const { initializationError, db } = require('../config/firebase');
+    const { initializationError, db, admin } = require('../config/firebase');
     if (initializationError) {
         return res.status(500).json({
             ok: false,
@@ -349,9 +358,22 @@ const getFirebaseHealth = async (req, res) => {
         });
     }
 
+    // Get current project ID and masked client email
+    const app = admin.app();
+    const projectId = app.options.credential.projectId || 'Unknown';
+    const clientEmail = app.options.credential.clientEmail || 'Unknown';
+    const maskedEmail = clientEmail !== 'Unknown' 
+        ? clientEmail.substring(0, 5) + '...' + clientEmail.substring(clientEmail.indexOf('@'))
+        : 'Unknown';
+
     return res.json({
         ok: true,
-        message: 'Firebase Admin initialized and DB available'
+        message: 'Firebase Admin initialized and DB available',
+        diagnostics: {
+            projectId: projectId,
+            clientEmail: maskedEmail,
+            databaseId: '(default)'
+        }
     });
 };
 
