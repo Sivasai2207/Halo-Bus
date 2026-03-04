@@ -61,7 +61,6 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
   Map<String, dynamic> _tripStopProgress = {};
   Map<String, dynamic> _tripEta = {};
   String? _tripDirection;
-  String? _tripStatus; 
   StreamSubscription? _notifSubscription;
   final Set<String> _processedNotifIds = {};
   String? _currentTripId; // Guard: only re-subscribe when tripId actually changes
@@ -304,7 +303,6 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
             _tripStopProgress = Map<String, dynamic>.from(data['stopProgress'] ?? {});
             _tripEta = Map<String, dynamic>.from(data['eta'] ?? {});
             _tripDirection = data['direction'] as String?;
-            _tripStatus = (data['status'] as String?)?.toLowerCase(); 
             _totalStops = _tripStopsSnapshot.length;
             final currentIdx = (_tripStopProgress['currentIndex'] as num?)?.toInt() ?? 0;
             _stopsRemaining = _totalStops - currentIdx;
@@ -455,17 +453,15 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
             'radiusM': s.radiusM
           }).toList() ?? []);
 
-    if (stopsList.isEmpty) return [];
+    if (stopsList.isEmpty || _currentBus?.location == null) return [];
 
     final arrivedIds = List<String>.from(_tripStopProgress['arrivedStopIds'] ?? []);
     final skippedIds = List<String>.from(_tripStopProgress['skippedStopIds'] ?? []);
     final completedIds = List<String>.from(_tripStopProgress['completedStopIds'] ?? []);
     final currentIndex = (_tripStopProgress['currentIndex'] as num?)?.toInt() ?? 0;
     
-    final busLat = _currentBus?.location?.latitude ?? 0.0;
-    final busLng = _currentBus?.location?.longitude ?? 0.0;
-    
-    final isTripCompleted = _tripStatus == 'completed';
+    final busLat = _currentBus!.location!.latitude;
+    final busLng = _currentBus!.location!.longitude;
 
     return List.generate(stopsList.length, (index) {
       final stop = stopsList[index];
@@ -480,9 +476,7 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
       final isCompleted = completedIds.contains(stopId);
 
       String status;
-      if (isTripCompleted) {
-        status = isSkipped ? "SKIPPED" : "COMPLETED";
-      } else if (isCompleted) {
+      if (isCompleted) {
         status = "COMPLETED";
       } else if (isSkipped) {
         status = "SKIPPED";
@@ -492,15 +486,7 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
         if (index < currentIndex) {
           status = "COMPLETED"; // Failsafe
         } else if (index == currentIndex) {
-          // R-4 FIX: Check currentBus status first (Source of Truth)
-          final busStatus = _currentBus?.currentStatus;
-          if (busStatus == "ARRIVED") {
-            status = "ARRIVED";
-          } else if (busStatus == "ARRIVING" || (_currentBus?.location != null && distM <= 804)) {
-            status = "ARRIVING";
-          } else {
-            status = "NEXT";
-          }
+          status = (distM <= 804) ? "ARRIVING" : "NEXT";
         } else {
           status = "NEXT";
         }
@@ -741,7 +727,7 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
                         driverName: _currentBus?.driverName,
                         driverPhone: _currentBus?.driverPhone,
                       ),
-                      if (_tripStopsSnapshot.isNotEmpty || _currentRoute != null)
+                      if (_currentRoute != null)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: DropOffList(items: _buildDropOffItems()),

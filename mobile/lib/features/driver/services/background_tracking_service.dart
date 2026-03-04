@@ -593,15 +593,20 @@ class BackgroundTrackingService {
   }
 
   static Map<String, String> _computeAdaptiveState(
-    double distToStop,
+    double distToNextStopM,
     String currentStatus,
-    double stopRadius,
-    bool hasArrived,
+    double radiusM,
+    bool hasArrivedCurrent,
   ) {
-  ) {
-    if (hasArrived || distToStop <= stopRadius) {
+    if (hasArrivedCurrent) {
+       // We latch in ARRIVED even if GPS drifts slightly outside, 
+       // until _handleStopCompletion explicitly moves us out with hysteresis.
+       return {'mode': 'NEAR_STOP', 'status': 'ARRIVED'};
+    }
+    
+    if (distToNextStopM <= radiusM) {
       return {'mode': 'NEAR_STOP', 'status': 'ARRIVED'};
-    } else if (distToStop <= _ARRIVING_DISTANCE_M) {
+    } else if (distToNextStopM <= _ARRIVING_DISTANCE_M) {
       return {'mode': 'NEAR_STOP', 'status': 'ARRIVING'};
     } else {
       return {'mode': 'FAR', 'status': 'ON_ROUTE'};
@@ -618,28 +623,71 @@ class BackgroundTrackingService {
     Position p,
   ) async {
     try {
-      debugPrint("[Tracker] Arrived at stop $stopId. Updating Firestore...");
       final db = FirebaseFirestore.instance;
       final tripRef = db.collection('trips').doc(tripId);
+      final tripDoc = await tripRef.get();
+      if (!tripDoc.exists) return;
 
-      // Update arrivedStopIds and the specific stop status
-      await tripRef.update({
-        'stopProgress.arrivedStopIds': FieldValue.arrayUnion([stopId]),
-        'stopProgress.stops.$stopId.status': 'ARRIVED',
-        'stopProgress.stops.$stopId.arrivedAt': FieldValue.serverTimestamp(),
-      });
+      final data = tripDoc.data()!;
+      final progress = data['stopProgress'] as Map<String, dynamic>? ?? {};
+      final arrivedIds = List<String>.from(progress['arrivedStopIds'] ?? []);
+      final arrivals = Map<String, dynamic>.from(progress['arrivals'] ?? {});
+      final stops = (data['stopsSnapshot'] as List<dynamic>?) ?? [];
+      final currentIndex = (progress['currentIndex'] as num?)?.toInt() ?? 0;
 
-      // R-1 FIX: Update the 'buses' collection so Admin Panel shows Green immediately
-      await db.collection('buses').doc(busId).update({
-        'currentStatus': 'ARRIVED',
-        'lastUpdated': DateTime.now().toIso8601String(),
-      });
+      if (!arrivedIds.contains(stopId)) {
+        arrivedIds.add(stopId);
+        arrivals[stopId] = DateTime.now().toIso8601String();
+        
+        final batch = db.batch();
 
-      _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", 
-          stopName: stopName,
-          prefs: prefs);
+        // 1. Update Trip
+        batch.update(tripRef, {
+          'stopProgress.arrivedStopIds': arrivedIds,
+          'stopProgress.arrivals': arrivals,
+          'stopStatus.$stopId': 'ARRIVED',
+        });
+
+        // 2. Trigger Event for Student Notifications (Firestore fallback)
+        final notifRef = db.collection('stopArrivals').doc();
+        batch.set(notifRef, {
+          'tripId': tripId,
+          'busId': busId,
+          'collegeId': collegeId,
+          'stopId': stopId,
+          'stopName': stops.length > currentIndex ? (stops[currentIndex]['name'] ?? stopName) : stopName,
+          'type': 'ARRIVED',
+          'arrivedAt': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toIso8601String(),
+          'processed': true, // Mark true because we will also call Node API
+        });
+
+        // 3. Update Bus
+        batch.update(db.collection('buses').doc(busId), {
+          'currentStatus': 'ARRIVED',
+          'trackingMode': 'NEAR_STOP',
+        });
+
+        // 4. Trigger Server FCM (Step 5F) UNCONDITIONALLY BEFORE BATCH COMMIT
+        // This prevents Android offline queueing from swallowing/delaying the HTTP dispatch
+        _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", 
+          stopName: stops.length > currentIndex ? stops[currentIndex]['name'] : stopName,
+          arrivalDocId: notifRef.id,
+          prefs: prefs
+        );
+
+        await batch.commit();
+
+        // 5. Update UI immediately (Android)
+        if (Platform.isAndroid) {
+          FlutterBackgroundService().invoke('update', {
+            'status': 'ARRIVED',
+            'nextStopId': stopId,
+          });
+        }
+      }
     } catch (e) {
-      debugPrint("[Tracker] _handleArrivalEntry error: $e");
+      debugPrint("[Background] HandleArrivalEntry error: $e");
     }
   }
 
@@ -651,7 +699,6 @@ class BackgroundTrackingService {
     String stopId,
   ) async {
     try {
-      debugPrint("[Tracker] Departed stop $stopId. Advancing to next stop...");
       final db = FirebaseFirestore.instance;
       final tripRef = db.collection('trips').doc(tripId);
       final tripDoc = await tripRef.get();
@@ -659,51 +706,107 @@ class BackgroundTrackingService {
 
       final data = tripDoc.data()!;
       final progress = data['stopProgress'] as Map<String, dynamic>? ?? {};
-      final currentIndex = (progress['currentIndex'] as num?)?.toInt() ?? 0;
       final stops = (data['stopsSnapshot'] as List<dynamic>?) ?? [];
+      final currentIndex = (progress['currentIndex'] as num?)?.toInt() ?? 0;
 
-      // Update current stop as COMPLETED and add to completedStopIds
-      await tripRef.update({
+      final newIndex = currentIndex + 1;
+      final isFinalStop = newIndex >= stops.length;
+
+      final batch = db.batch();
+
+      // 1. Update Trip Progress
+      batch.update(tripRef, {
+        'stopProgress.currentIndex': newIndex,
         'stopProgress.completedStopIds': FieldValue.arrayUnion([stopId]),
-        'stopProgress.stops.$stopId.status': 'COMPLETED',
-        'stopProgress.stops.$stopId.completedAt': FieldValue.serverTimestamp(),
+        'stopStatus.$stopId': 'COMPLETED',
       });
 
-      if (currentIndex + 1 < stops.length) {
-        final nextIndex = currentIndex + 1;
-        final nextStop = stops[nextIndex] as Map<String, dynamic>;
+      // 2. Update Bus Status
+      final Map<String, dynamic> busUpdate = {
+        'currentStatus': 'MOVING',
+        'trackingMode': 'FAR',
+        'completedStops': FieldValue.arrayUnion([stopId]),
+      };
 
-        await tripRef.update({
-          'stopProgress.currentIndex': nextIndex,
-          'stopProgress.lastUpdated': FieldValue.serverTimestamp(),
-        });
-
+      if (!isFinalStop) {
+        final nextStop = stops[newIndex] as Map<String, dynamic>;
+        busUpdate['nextStopId'] = nextStop['stopId'] as String;
+        
+        // Cache NEXT stop for isolate restart
         await prefs.setDouble('next_stop_lat', (nextStop['lat'] as num).toDouble());
         await prefs.setDouble('next_stop_lng', (nextStop['lng'] as num).toDouble());
-        await prefs.setString('next_stop_id', nextStop['stopId'] as String? ?? nextStop['id'] as String? ?? '');
-        await prefs.setString('next_stop_name', nextStop['name'] as String? ?? 'Stop');
         await prefs.setDouble('next_stop_radius', (nextStop['radiusM'] as num?)?.toDouble() ?? 100.0);
+        await prefs.setString('next_stop_id', nextStop['stopId'] as String);
+        await prefs.setString('next_stop_name', (nextStop['name'] as String?) ?? 'Stop');
         await prefs.setBool('has_arrived_current', false);
 
-        // R-2 FIX: Reset bus status to ON_ROUTE when moving to next stop
-        await db.collection('buses').doc(busId).update({
-          'currentStatus': 'ON_ROUTE',
-          'nextStopId': nextStop['stopId'] ?? nextStop['id'],
-          'lastUpdated': DateTime.now().toIso8601String(),
-        });
+        batch.update(db.collection('buses').doc(busId), busUpdate);
+        await batch.commit();
 
-        debugPrint("[Tracker] Auto-advanced to stop: ${nextStop['name']}");
+        // 5. Update UI immediately
+        if (Platform.isAndroid) {
+          FlutterBackgroundService().invoke('update', {
+            'status': 'MOVING',
+            'nextStopId': nextStop['stopId'],
+            'nextStopName': nextStop['name'],
+          });
+        }
       } else {
-        debugPrint("[Tracker] All stops completed.");
+        // AUTO-END
+        debugPrint("[Background] AUTO-ENDING TRIP at final stop");
+
+        // Notify students that trip ended UNCONDITIONALLY BEFORE BATCH COMMIT
+        try {
+          _notifyServer(tripId, busId, collegeId, '', 'TRIP_ENDED', prefs: prefs);
+        } catch (e) {
+          debugPrint('[Background] Trip ended notification failed: $e');
+        }
+
+        batch.update(tripRef, {
+          'status': 'COMPLETED',
+          'isActive': false,
+          'endTime': DateTime.now().toIso8601String(),
+          'endedAt': FieldValue.serverTimestamp(),
+        });
+        busUpdate['status'] = 'IDLE';
+        busUpdate['activeTripId'] = null;
+        busUpdate['currentStatus'] = 'OFFLINE';
+        busUpdate['trackingMode'] = 'FAR';
+        
+        await prefs.setBool('pending_finalize', true);
+        await prefs.setString('pending_trip_id', tripId);
+        await prefs.setString('pending_bus_id', busId);
+        await prefs.setString('pending_college_id', collegeId);
+        
+        batch.update(db.collection('buses').doc(busId), busUpdate);
+        await batch.commit(); // Ensure firestore is updated before finalization
+
+        try {
+           final apiBase = prefs.getString('api_base_url') ?? Env.apiUrl;
+           final user = FirebaseAuth.instance.currentUser;
+           final token = await user?.getIdToken();
+           if (token != null) {
+              await Dio().post(
+                '$apiBase/api/driver/trip/end/$busId',
+                options: Options(headers: {'Authorization': 'Bearer $token'}),
+              );
+           }
+        } catch(e) {
+           debugPrint("[Background] Auto-finalize HTTP failed, will retry: $e");
+        }
+
+        // C-4 FIX: Explicitly reset _isRunning so a new trip can be started afterward.
+        BackgroundTrackingService._isRunning = false;
+        
+        if (Platform.isAndroid) {
+          FlutterBackgroundService().invoke("stopService");
+        } else {
+          await IosLocationTracker.stop();
+        }
       }
 
-      // Notify server of completion
-      _notifyServer(tripId, busId, collegeId, stopId, "COMPLETED",
-          stopName: data['stopsSnapshot']?[currentIndex]?['name'] ?? '',
-          prefs: prefs);
-
     } catch (e) {
-      debugPrint("[Tracker] _handleStopCompletion error: $e");
+      debugPrint("[Background] HandleStopCompletion error: $e");
     }
   }
 
@@ -748,9 +851,9 @@ class BackgroundTrackingService {
     }
   }
 
-  static Future<void> _handleManualSkip(
-      ServiceInstance service, Map<String, dynamic>? params) async {
+  static Future<void> _handleManualSkip(ServiceInstance service, Map<String, dynamic>? params) async {
     if (params == null) return;
+    
     final stopId = params['stopId'] as String?;
     if (stopId == null) return;
 
@@ -760,7 +863,10 @@ class BackgroundTrackingService {
       final busId = prefs.getString('track_bus_id');
       final tripId = prefs.getString('track_trip_id');
 
-      if (collegeId == null || busId == null || tripId == null) return;
+      if (collegeId == null || busId == null || tripId == null) {
+        debugPrint("[Background] Skip failed: missing context");
+        return;
+      }
 
       final db = FirebaseFirestore.instance;
       final tripRef = db.collection('trips').doc(tripId);
@@ -768,103 +874,168 @@ class BackgroundTrackingService {
       if (!tripDoc.exists) return;
 
       final data = tripDoc.data()!;
-      final progress =
-          data['stopProgress'] as Map<String, dynamic>? ?? {};
-      final currentIndex =
-          (progress['currentIndex'] as num?)?.toInt() ?? 0;
-      final stops = data['stopsSnapshot'] as List<dynamic>? ?? [];
+      final progress = data['stopProgress'] as Map<String, dynamic>? ?? {};
+      final currentIndex = (progress['currentIndex'] as num?)?.toInt() ?? 0;
+      final stops = (data['stopsSnapshot'] as List<dynamic>?) ?? [];
 
-      if (currentIndex + 1 >= stops.length) {
-        debugPrint("[Tracker] Skip: already at last stop");
+      // Verify the stopId matches the CURRENT stop in progress
+      if (stops[currentIndex]['stopId'] != stopId && stops[currentIndex]['id'] != stopId) {
+        debugPrint("[Background] Skip mismatch: targeted $stopId, currently at ${stops[currentIndex]['stopId']}");
         return;
       }
 
-      final nextIndex = currentIndex + 1;
-      final nextStop = stops[nextIndex] as Map<String, dynamic>;
+      if (currentIndex + 1 < stops.length) {
+        final batch = db.batch();
+        final skippedIds = List<String>.from(progress['skippedStopIds'] ?? []);
+        
+        if (!skippedIds.contains(stopId)) {
+          skippedIds.add(stopId);
+          final newIndex = currentIndex + 1;
+          final nextStop = stops[newIndex] as Map<String, dynamic>;
 
-      await tripRef.update({
-        'stopProgress.currentIndex': nextIndex,
-        'stopProgress.lastUpdated': FieldValue.serverTimestamp(),
-        'stopProgress.skippedStopIds': FieldValue.arrayUnion([stopId]),
-        'stopProgress.stops.$stopId.status': 'SKIPPED',
-        'stopProgress.stops.$stopId.skippedAt': FieldValue.serverTimestamp(),
-      });
+          // 1. Update Trip Progress
+          batch.update(tripRef, {
+            'stopProgress.currentIndex': newIndex,
+            'stopProgress.skippedStopIds': skippedIds,
+          });
 
-      await prefs.setDouble(
-          'next_stop_lat', (nextStop['lat'] as num).toDouble());
-      await prefs.setDouble(
-          'next_stop_lng', (nextStop['lng'] as num).toDouble());
-      await prefs.setString('next_stop_id', nextStop['stopId'] as String? ?? nextStop['id'] as String? ?? '');
-      await prefs.setString(
-          'next_stop_name', nextStop['name'] as String? ?? 'Stop');
-      await prefs.setBool('has_arrived_current', false);
-      await prefs.remove('skip_warned_stop');
+          // 2. Trigger Skip Event for Notifications
+          final notifRef = db.collection('stopArrivals').doc();
+          batch.set(notifRef, {
+            'tripId': tripId,
+            'busId': busId,
+            'collegeId': collegeId,
+            'stopId': stopId,
+            'stopName': stops[currentIndex]['name'] ?? 'Stop',
+            'type': 'SKIPPED',
+            'timestamp': DateTime.now().toIso8601String(),
+            'processed': true,
+          });
 
-      // R-3 FIX: Reset bus status to ON_ROUTE when skipping
-      await db.collection('buses').doc(busId).update({
-        'currentStatus': 'ON_ROUTE',
-        'nextStopId': nextStop['stopId'] ?? nextStop['id'],
-        'lastUpdated': DateTime.now().toIso8601String(),
-      });
+          // 3. Update Bus Status
+          batch.update(db.collection('buses').doc(busId), {
+            'nextStopId': nextStop['stopId'] ?? nextStop['id'],
+            'currentStatus': 'ON_ROUTE',
+          });
 
-      final stopName = (progress['stops'] as Map?)?[stopId]?['name'] ?? 
-                      (stops[currentIndex] as Map?)?['name'] ?? 'Stop';
+          // 4. Trigger Server FCM
+          final stopData = stops[currentIndex] as Map<String, dynamic>;
+          final targetStudentIds = (stopData['studentIds'] as List<dynamic>?)?.cast<String>();
 
-      _notifyServer(tripId, busId, collegeId, stopId, "SKIPPED",
-          stopName: stopName,
-          prefs: prefs);
+          _notifyServer(tripId, busId, collegeId, stopId, "SKIPPED", 
+            stopName: stops[currentIndex]['name'],
+            arrivalDocId: notifRef.id,
+            targetStudentIds: targetStudentIds,
+            prefs: prefs
+          );
 
-      service.invoke('update', {
-        'nextStopId': nextStop['id'],
-        'nextStopName': nextStop['name'],
-      });
+          await batch.commit();
 
-      debugPrint("[Tracker] Manual skip done. Now targeting: ${nextStop['name']}");
+          // 5. Update Local Cache for Isolate (Crucial for restarts)
+          await prefs.setDouble('next_stop_lat', (nextStop['lat'] as num).toDouble());
+          await prefs.setDouble('next_stop_lng', (nextStop['lng'] as num).toDouble());
+          await prefs.setDouble('next_stop_radius', (nextStop['radiusM'] as num?)?.toDouble() ?? 100.0);
+          await prefs.setString('next_stop_id', nextStop['stopId'] ?? nextStop['id'] as String);
+          await prefs.setString('next_stop_name', (nextStop['name'] as String?) ?? 'Stop');
+          await prefs.setBool('has_arrived_current', false);
+
+          debugPrint("[Tracker] MANUAL SKIP SUCCESS: $stopId -> ${nextStop['stopId'] ?? nextStop['id']}");
+          
+          // 6. Update UI immediately (Safe invoke using the active service instance)
+          if (Platform.isAndroid) {
+            service.invoke('update', {
+              'status': 'ON_ROUTE',
+              'lat': prefs.getDouble('last_lat') ?? 0.0,
+              'lng': prefs.getDouble('last_lng') ?? 0.0,
+              'speedMph': params['speedMph'] ?? 0,
+              'nextStopId': nextStop['stopId'] ?? nextStop['id'],
+              'nextStopName': nextStop['name'],
+            });
+          }
+        }
+      } else {
+        debugPrint("[Background] Cannot skip last stop.");
+      }
     } catch (e) {
-      debugPrint("[Tracker] Manual skip error: $e");
+      debugPrint("[Background] Manual skip error: $e");
     }
   }
 
-  static Future<void> _notifyServer(
+  /// Fire-and-forget call to the Node.js server to multicast FCM notifications.
+  static void _notifyServer(
     String tripId,
     String busId,
     String collegeId,
     String stopId,
-    String eventType, {
-    String stopName = '',
-    required SharedPreferences prefs,
+    String type, {
+    String? stopName,
+    String? arrivalDocId,
+    List<String>? targetStudentIds,
+    SharedPreferences? prefs,
   }) async {
     try {
-      final token = prefs.getString('auth_token') ?? '';
-      if (token.isEmpty) {
-        debugPrint("[Tracker] _notifyServer: No auth token, skipping.");
+      final apiBase = prefs?.getString('api_base_url') ?? Env.apiUrl;
+      
+      // Use Firebase ID Token directly - this ensures it is ALWAYS fresh
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        debugPrint('[Tracker] _notifyServer aborted: No active FirebaseAuth user.');
         return;
       }
 
-      debugPrint("[Tracker] NOTIFY SERVER: $eventType for stop $stopName (ID: $stopId) on trip $tripId");
-      
-      final dio = Dio();
-      final response = await dio.post(
-        '${Env.apiUrl}/api/driver/stop-event',
-        data: {
-          'tripId': tripId,
-          'busId': busId,
-          'collegeId': collegeId,
-          'stopId': stopId,
-          'type': eventType,
-          'eventType': eventType,
-          'stopName': stopName,
-          'timestamp': DateTime.now().toIso8601String(),
+      final token = await user.getIdToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('[Tracker] _notifyServer aborted: Failed to fetch fresh ID token.');
+        return;
+      }
+
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-          sendTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
-        ),
-      );
-      debugPrint("[Tracker] Server notified successfully: ${response.statusCode} for $eventType");
+      ));
+
+      final payload = {
+        'tripId': tripId,
+        'busId': busId,
+        'collegeId': collegeId,
+        'stopId': stopId,
+        'stopName': stopName ?? 'Stop',
+        'type': type,
+        'timestamp': DateTime.now().toIso8601String(),
+        if (arrivalDocId != null) 'arrivalDocId': arrivalDocId,
+        if (targetStudentIds != null && targetStudentIds.isNotEmpty) 
+          'targetStudentIds': targetStudentIds,
+      };
+
+      if (type == 'TRIP_ENDED') {
+        final response = await dio.post(
+          '$apiBase/api/driver/trip-ended-notify',
+          data: {
+            'tripId': tripId,
+            'busId': busId,
+            'collegeId': collegeId,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+        debugPrint('[Tracker] TRIP_ENDED success: ${response.statusCode}');
+      } else {
+        final response = await dio.post(
+          '$apiBase/api/driver/stop-event',
+          data: payload,
+        );
+        debugPrint('[Tracker] $type success: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      debugPrint('[Tracker] FAILED for $type at stopId=$stopId: ${e.message}');
+      if (e.response != null) {
+        debugPrint('[Tracker] Server response: ${e.response?.statusCode} — ${e.response?.data}');
+      }
     } catch (e) {
-      debugPrint("[Tracker] _notifyServer failed (non-fatal): $e");
+      debugPrint('[Tracker] Unexpected error in _notifyServer [$type]: $e');
     }
   }
 }
