@@ -3,13 +3,14 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getMessaging } from 'firebase/messaging';
 
+// Web app's Firebase configuration for live-bus-tracking-2ec59
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    apiKey: "AIzaSyBQ2YPWW3u0eQGngAb3iLaTZIo6io_MwCw",
+    authDomain: "live-bus-tracking-2ec59.firebaseapp.com",
+    projectId: "live-bus-tracking-2ec59",
+    storageBucket: "live-bus-tracking-2ec59.firebasestorage.app",
+    messagingSenderId: "34427841688",
+    appId: "1:34427841688:web:fee9c73258614a1ff434ed",
 };
 
 const app = initializeApp(firebaseConfig);
