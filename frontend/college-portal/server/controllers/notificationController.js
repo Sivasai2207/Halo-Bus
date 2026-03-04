@@ -388,7 +388,11 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
         } else if (type === 'SKIPPED') {
             title = 'Stop Skipped ⏭';
             body = `Bus skipped ${displayLocation} — heading to next stop`;
+        } else if (type === 'COMPLETED') {
+            title = 'Stop Completed ✅';
+            body = `Bus has departed ${displayLocation}`;
         } else {
+            console.warn(`[StopEvent] Unsupported type: ${type}`);
             return;
         }
 
@@ -442,9 +446,30 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
                 try {
                     const msg = {
                         notification: { title, body },
-                        data: { tripId: tripId || '', busId: busId || '', stopId: stopId || '', type },
-                        android: { priority: 'high', notification: { channelId: 'bus_events', sound: 'default' } },
-                        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+                        data: { 
+                            tripId: tripId || '', 
+                            busId: busId || '', 
+                            stopId: stopId || '', 
+                            type,
+                            click_action: 'FLUTTER_NOTIFICATION_CLICK' 
+                        },
+                        android: { 
+                            priority: 'high', 
+                            notification: { 
+                                channelId: 'bus_events', 
+                                sound: 'default',
+                                tag: `${busId}_${stopId}_${type}` // Prevent duplicate notification shade entries
+                            } 
+                        },
+                        apns: { 
+                            payload: { 
+                                aps: { 
+                                    sound: 'default', 
+                                    badge: 1,
+                                    'thread-id': busId 
+                                } 
+                            } 
+                        },
                         tokens: batch,
                     };
                     const result = await messaging.sendEachForMulticast(msg);
@@ -455,6 +480,8 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
                     console.error('[StopEvent] FCM transmission error:', fcmErr.message);
                 }
             }
+        } else {
+            console.log(`[StopEvent] NO TOKENS to notify for type=${type} at stop=${stopName}`);
         }
 
         // Write to notifications collection for admin Live Alerts panel
@@ -648,7 +675,10 @@ const sendTripEndedNotification = async (tripId, busId, collegeId) => {
         };
 
         if (tokensAbsentee.length > 0) {
+            console.log(`[TripEnded] Notifying ${tokensAbsentee.length} absentee students...`);
             await sendBatch(tokensAbsentee, absenteeTitle, absenteeBody);
+        } else {
+            console.log(`[TripEnded] NO ABSENTEES to notify for trip ${tripId}`);
         }
 
         // Log to notifications collection

@@ -1,14 +1,12 @@
-# STATE: Phase 2 Complete - Fixes Resonating
+# STATE: Critical Logic Sprint Initialized
 
 ## Current Position
-Phase 3: Verification & Handover.
+Phase 1: Researching 404s and missing triggers.
 
-## Completed Actions
-- Relocated `service-account.json` to `server/` directories in BOTH portals.
-- Enhanced `firebase.js` with explicit logging of paths and project IDs.
-- Pushed all changes to GitHub.
+## Architectural Decisions
+- Use `sendStopEventNotification` as the unified entry point for all stop-related FCMs.
+- Background service will own 'Arrived' and 'Arriving' triggers.
 
-## Next Steps
-- User must redeploy to Vercel.
-- User should update Vercel environment variables (Guide provided in chat).
-- Verify student login and driver fetch in the app.
+## Blockers
+- Extremely tight deadline (30 mins).
+- Need to verify if `targetStudentIds` are correctly passed from mobile for 'Skipped' events.

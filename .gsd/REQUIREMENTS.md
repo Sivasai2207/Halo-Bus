@@ -1,11 +1,12 @@
-# REQUIREMENTS: Driver Student Fetch & Student Login Fixes
+# REQUIREMENTS: Trip Logic & Notification Fixes
 
-## In-Scope (Phase 1)
-- **Fix Driver 404:** Resolve the issue where the driver app fails to fetch students (404 error).
-- **Fix Student Login:** Ensure students can log in using their registered email and register number (for first-time login) or password.
-- **Data Alignment:** Verify and correct any `collegeId` or `busId` mismatches in Firestore.
-- **Backend Verification:** Ensure the backend is correctly deployed and pointing to the `halo-bus` Firebase project.
+## In-Scope
+- **Notification Fixes:** Ensure 'Arriving', 'Arrived', and 'Skipped' notifications are sent to students.
+- **Skip Logic:** Fix 'Skip' button to correctly update Firestore and notify students.
+- **End-Trip Alerts:** Implement 'Not Boarded' (Absent) notifications at the end of the trip for all students not marked as attended.
+- **Proximity Automation:** Auto-mark stops as 'Completed' when the bus leaves the stop radius or crosses the point.
+- **Visual Feedback:** Correctly show ticks/status in the Student app's trip progress.
 
 ## Out-of-Scope
-- New features (Route optimization, billing, etc.).
-- UI redesign.
+- UI refactoring.
+- New reporting features.

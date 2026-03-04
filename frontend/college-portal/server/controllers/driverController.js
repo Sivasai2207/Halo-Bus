@@ -524,6 +524,7 @@ const historyUpload = async (req, res) => {
         }
 
         const tripData = tripDoc.data();
+        console.log(`[historyUpload] Starting for trip ${tripId}, bus ${tripData.busId}, attendance count: ${attendance?.length || 0}`);
 
         // Verify driver owns this trip
         if (tripData.driverId !== req.user.id) {
@@ -609,7 +610,9 @@ const historyUpload = async (req, res) => {
             }
 
             await batch.commit();
-            console.log(`[historyUpload] Written ${studentIds.length} present records (${direction})`);
+            console.log(`[historyUpload] SUCCESS: Written ${studentIds.length} present records (${direction})`);
+        } else {
+            console.log(`[historyUpload] INFO: No "present" attendance provided in payload.`);
         }
 
         // ── B. NOT_BOARDED: always run regardless of whether attendance was empty ──
@@ -666,7 +669,9 @@ const historyUpload = async (req, res) => {
             });
             if (pendingStudentDocs.length > 0) {
                 await nbBatch.commit();
-                console.log(`[historyUpload] Recorded ${pendingStudentDocs.length} absent students`);
+                console.log(`[historyUpload] SUCCESS: Recorded ${pendingStudentDocs.length} absent students as NOT_BOARDED/NOT_DROPPED`);
+            } else {
+                console.log(`[historyUpload] INFO: All assigned students were present. No absent records to create.`);
             }
         } catch (pendingErr) {
             console.error('[historyUpload] Pending students processing error:', pendingErr.message);

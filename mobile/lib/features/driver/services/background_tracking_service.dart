@@ -615,8 +615,22 @@ class BackgroundTrackingService {
     String stopId,
     Position p,
   ) async {
-    debugPrint("[Tracker] Arrived at stop $stopId");
-    _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", prefs: prefs);
+    try {
+      debugPrint("[Tracker] Arrived at stop $stopId. Updating Firestore...");
+      final db = FirebaseFirestore.instance;
+      final tripRef = db.collection('trips').doc(tripId);
+
+      // Update arrivedStopIds and the specific stop status
+      await tripRef.update({
+        'stopProgress.arrivedStopIds': FieldValue.arrayUnion([stopId]),
+        'stopProgress.stops.$stopId.status': 'ARRIVED',
+        'stopProgress.stops.$stopId.arrivedAt': FieldValue.serverTimestamp(),
+      });
+
+      _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", prefs: prefs);
+    } catch (e) {
+      debugPrint("[Tracker] _handleArrivalEntry error: $e");
+    }
   }
 
   static Future<void> _handleStopCompletion(
@@ -626,7 +640,54 @@ class BackgroundTrackingService {
     String tripId,
     String stopId,
   ) async {
-    debugPrint("[Tracker] Departed stop $stopId");
+    try {
+      debugPrint("[Tracker] Departed stop $stopId. Advancing to next stop...");
+      final db = FirebaseFirestore.instance;
+      final tripRef = db.collection('trips').doc(tripId);
+      final tripDoc = await tripRef.get();
+      if (!tripDoc.exists) return;
+
+      final data = tripDoc.data()!;
+      final progress = data['stopProgress'] as Map<String, dynamic>? ?? {};
+      final currentIndex = (progress['currentIndex'] as num?)?.toInt() ?? 0;
+      final stops = (data['stopsSnapshot'] as List<dynamic>?) ?? [];
+
+      // Update current stop as COMPLETED and add to completedStopIds
+      await tripRef.update({
+        'stopProgress.completedStopIds': FieldValue.arrayUnion([stopId]),
+        'stopProgress.stops.$stopId.status': 'COMPLETED',
+        'stopProgress.stops.$stopId.completedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (currentIndex + 1 < stops.length) {
+        final nextIndex = currentIndex + 1;
+        final nextStop = stops[nextIndex] as Map<String, dynamic>;
+
+        await tripRef.update({
+          'stopProgress.currentIndex': nextIndex,
+          'stopProgress.lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        await prefs.setDouble('next_stop_lat', (nextStop['lat'] as num).toDouble());
+        await prefs.setDouble('next_stop_lng', (nextStop['lng'] as num).toDouble());
+        await prefs.setString('next_stop_id', nextStop['id'] as String? ?? '');
+        await prefs.setString('next_stop_name', nextStop['name'] as String? ?? 'Stop');
+        await prefs.setDouble('next_stop_radius', (nextStop['radiusM'] as num?)?.toDouble() ?? 100.0);
+        await prefs.setBool('has_arrived_current', false);
+
+        debugPrint("[Tracker] Auto-advanced to stop: ${nextStop['name']}");
+      } else {
+        debugPrint("[Tracker] All stops completed.");
+      }
+
+      // Notify server of completion
+      _notifyServer(tripId, busId, collegeId, stopId, "COMPLETED",
+          stopName: data['stopsSnapshot']?[currentIndex]?['name'] ?? '',
+          prefs: prefs);
+
+    } catch (e) {
+      debugPrint("[Tracker] _handleStopCompletion error: $e");
+    }
   }
 
   static Future<void> _checkForSkip(
@@ -707,6 +768,7 @@ class BackgroundTrackingService {
       await tripRef.update({
         'stopProgress.currentIndex': nextIndex,
         'stopProgress.lastUpdated': FieldValue.serverTimestamp(),
+        'stopProgress.skippedStopIds': FieldValue.arrayUnion([stopId]),
         'stopProgress.stops.$stopId.status': 'SKIPPED',
         'stopProgress.stops.$stopId.skippedAt': FieldValue.serverTimestamp(),
       });
@@ -760,7 +822,8 @@ class BackgroundTrackingService {
           'busId': busId,
           'collegeId': collegeId,
           'stopId': stopId,
-          'eventType': eventType,
+          'type': eventType, // Canonical backend field
+          'eventType': eventType, // Backward compat
           'stopName': stopName,
           'timestamp': DateTime.now().toIso8601String(),
         },

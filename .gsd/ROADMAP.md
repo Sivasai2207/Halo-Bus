@@ -1,17 +1,16 @@
-# ROADMAP: Error Resolution Phase
+# ROADMAP: 30-Minute Critical Fix Sprint
 
-## Phase 1: Research & Diagnostics (Current)
-- [ ] Verify backend deployment status and logs.
-- [ ] Audit `collegeId` and `busId` consistency in Firestore.
-- [ ] Trace `busStudentsProvider` and API endpoint request/response.
-- [ ] Test student login with specific accounts (**prasad@gmail.com**, **karthik@gmail.com**).
+## Phase 1: Research & Trace (10 mins)
+- [ ] Trace 'Skip' action from Mobile App to Backend.
+- [ ] Verify FCM token fetching and targeting in `notificationController.js`.
+- [ ] Audit `driver_trip_screen.dart` for direct proximity triggers.
 
-## Phase 2: Implementation & Fixes
-- [ ] Correct API endpoint mismatch or data lookup logic in `driverController.js`.
-- [ ] Harden student login comparison (register number vs password).
-- [ ] Synchronize `collegeId` across all relevant documents (Colleges, Users, Students, Buses).
+## Phase 2: Implementation (15 mins)
+- [ ] Fix `sendStopEventNotification` to include targeting for 'Skipped' events.
+- [ ] Implement absent notification loop in `endTrip` controller.
+- [ ] Add 'Completed' auto-trigger in background tracking service.
 
-## Phase 3: Verification & Handover
-- [ ] Re-test with new Release APK.
-- [ ] Verify logs show successful student fetch and login.
-- [ ] Update documentation and walkthrough.
+## Phase 3: Verification (5 mins)
+- [ ] Verify logs show FCM success.
+- [ ] Test 'Skip' on a live trip (using simulation or manual update).
+- [ ] Build final Release APK for meeting.
