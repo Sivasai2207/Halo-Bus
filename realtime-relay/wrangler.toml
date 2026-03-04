@@ -1,0 +1,20 @@
+name = "halobus-live-bus-tracking"
+main = "src/index.ts"
+compatibility_date = "2026-02-22"
+
+# Durable Object binding
+[[durable_objects.bindings]]
+name = "BUS_ROOM"
+class_name = "BusRoom"
+
+# Durable Object migrations (first time creation)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BusRoom"]
+
+# Environment variables (non-secret)
+[vars]
+TOKEN_TTL_SECONDS = "600"
+
+# Secrets (set via `wrangler secret put RELAY_HMAC_SECRET`)
+# RELAY_HMAC_SECRET = "..." (DO NOT put secrets here)

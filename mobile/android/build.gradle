@@ -1,0 +1,67 @@
+buildscript {
+    ext.kotlin_version = '2.1.0'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = "../build"
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.core' && details.requested.name == 'core-ktx') {
+                details.useVersion '1.13.1'
+            }
+            if (details.requested.group == 'androidx.browser' && details.requested.name == 'browser') {
+                details.useVersion '1.8.0'
+            }
+        }
+    }
+
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (project.android.hasProperty('compileSdkVersion')) {
+                    compileSdkVersion 36
+                }
+                if (project.android.hasProperty('namespace') && project.android.namespace == null) {
+                    project.android.namespace = project.group
+                }
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        
+        project.tasks.withType(JavaCompile).configureEach {
+            sourceCompatibility = '17'
+            targetCompatibility = '17'
+        }
+    }
+    
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+            freeCompilerArgs += ["-Xskip-metadata-version-check"]
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}

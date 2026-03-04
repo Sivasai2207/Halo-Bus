@@ -1,0 +1,133 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "notifications",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "students",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "favoriteBusIds",
+                    "arrayConfig": "CONTAINS"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "users",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "favoriteBusIds",
+                    "arrayConfig": "CONTAINS"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "attendance",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "tripId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "pickedUpAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "attendance",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "busId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "pickedUpAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "attendance",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "attendance",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "busId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "attendance",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "collegeId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "tripId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

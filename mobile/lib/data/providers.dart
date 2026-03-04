@@ -1,0 +1,184 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/config/env.dart';
+
+import 'datasources/api_ds.dart';
+import 'datasources/auth_ds.dart';
+import 'datasources/firestore_ds.dart';
+import 'repositories/auth_repo.dart';
+import 'repositories/bus_repo.dart';
+import 'repositories/tracking_repo.dart';
+import 'repositories/trip_repo.dart';
+import 'repositories/user_repo.dart';
+import 'models/bus.dart';
+import 'models/user_profile.dart';
+
+// External Services
+final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
+final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio(BaseOptions(baseUrl: Env.apiUrl));
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      try {
+        // Use Firebase ID Token directly - this ensures it is ALWAYS fresh
+        // Firebase Auth automatically handles refreshing the token if it's expired.
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          final token = await user.getIdToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+            // debugPrint("[Dio] Added fresh Firebase ID Token to header");
+          }
+        } else {
+          // Fallback to SharedPreferences for login/public routes if needed
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+        }
+      } catch (e) {
+        debugPrint("Error getting token for Dio: $e");
+      }
+      return handler.next(options);
+    },
+  ));
+  return dio;
+});
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError());
+
+// Authentication state stream
+final authStateProvider = StreamProvider<User?>((ref) {
+  final authRepository = ref.watch(authRepositoryProvider);
+  return authRepository.authStateChanges;
+});
+
+// Internal State
+final selectedCollegeIdProvider = StateProvider<String?>((ref) => null);
+final selectedCollegeProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
+
+// Data Sources
+final authDataSourceProvider = Provider<AuthDataSource>((ref) {
+  return AuthDataSource(
+    ref.read(firebaseAuthProvider),
+    ref.read(apiDataSourceProvider),
+  );
+});
+
+final firestoreDataSourceProvider = Provider<FirestoreDataSource>((ref) {
+  return FirestoreDataSource(ref.read(firestoreProvider));
+});
+
+final apiDataSourceProvider = Provider<ApiDataSource>((ref) {
+  return ApiDataSource(
+    ref.read(dioProvider),
+    ref.read(firestoreProvider),
+  );
+});
+
+// Repositories
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository(
+    ref.read(authDataSourceProvider),
+    ref.read(firestoreDataSourceProvider),
+  );
+});
+
+final busRepositoryProvider = Provider<BusRepository>((ref) {
+  return BusRepository(ref.read(firestoreDataSourceProvider));
+});
+
+final tripRepositoryProvider = Provider<TripRepository>((ref) {
+  return TripRepository(ref.read(firestoreDataSourceProvider));
+});
+
+final trackingRepositoryProvider = Provider<TrackingRepository>((ref) {
+  return TrackingRepository(
+    ref.read(apiDataSourceProvider),
+    ref.read(firestoreDataSourceProvider),
+  );
+});
+
+final userRepositoryProvider = Provider<UserRepository>((ref) {
+  return UserRepository(
+    ref.read(authDataSourceProvider),
+    ref.read(firestoreDataSourceProvider),
+  );
+});
+
+final userProfileProvider = StreamProvider<UserProfile?>((ref) {
+  final authState = ref.watch(authStateProvider);
+  final user = authState.value;
+  if (user == null) return Stream.value(null);
+
+  final collegeId = ref.watch(selectedCollegeIdProvider);
+  if (collegeId == null) return Stream.value(null);
+
+  return ref.read(firestoreDataSourceProvider).streamUserProfile(collegeId, user.uid);
+});
+
+final busesProvider = StreamProvider.family<List<Bus>, String>((ref, collegeId) {
+  final ds = ref.watch(firestoreDataSourceProvider);
+  return ds.getBuses(collegeId);
+});
+
+final studentsProvider = StreamProvider.family<List<UserProfile>, String>((ref, collegeId) {
+  final ds = ref.watch(firestoreDataSourceProvider);
+  return ds.getStudents(collegeId);
+});
+final assignedBusProvider = StreamProvider<Bus?>((ref) {
+  final userProfile = ref.watch(userProfileProvider).value;
+  if (userProfile == null || userProfile.role.toLowerCase() != 'driver') return Stream.value(null);
+
+  final collegeId = userProfile.collegeId;
+  final driverId = userProfile.id;
+
+  return ref.read(firestoreDataSourceProvider).getDriverBuses(collegeId, driverId).map((buses) {
+    if (buses.isEmpty) return null;
+    return buses.first;
+  });
+});
+
+final activeTripIdProvider = StreamProvider<String?>((ref) {
+  final assignedBus = ref.watch(assignedBusProvider).value;
+  if (assignedBus == null) return Stream.value(null);
+
+  final firestore = ref.watch(firestoreProvider);
+  return firestore.collection('buses').doc(assignedBus.id).snapshots().map((snapshot) {
+    if (!snapshot.exists) return null;
+    return snapshot.data()?['activeTripId'] as String?;
+  });
+});
+
+final tripProvider = StreamProvider.family<Map<String, dynamic>?, String>((ref, tripId) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore.collection('trips').doc(tripId).snapshots().map((snapshot) {
+    return snapshot.data();
+  });
+});
+
+final tripAttendanceProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, tripId) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/api/driver/trips/$tripId/attendance');
+  if (response.data['success']) {
+    return List<Map<String, dynamic>>.from(response.data['data']);
+  }
+  return [];
+});
+
+final busStudentsProvider = FutureProvider.family<List<UserProfile>, String>((ref, busId) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/api/driver/buses/$busId/students');
+  if (response.data['success']) {
+    return (response.data['data'] as List)
+        .map((s) => UserProfile.fromJson(s))
+        .toList()
+        .cast<UserProfile>();
+  }
+  return [];
+});
