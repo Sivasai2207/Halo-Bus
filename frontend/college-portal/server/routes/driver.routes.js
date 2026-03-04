@@ -81,9 +81,13 @@ router.post('/stop-event', async (req, res) => {
         if (!tripId || !busId || !collegeId || !stopId || !type) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
-        if (!['ARRIVING', 'ARRIVED', 'SKIPPED'].includes(type)) {
+        // Add COMPLETED to the allowed list (Step 7 Fix)
+        if (!['ARRIVING', 'ARRIVED', 'SKIPPED', 'COMPLETED'].includes(type)) {
+            console.error(`[StopEvent Route] REJECTED: Invalid type "${type}" from bus ${busId}`);
             return res.status(400).json({ success: false, message: 'Invalid type' });
         }
+
+        console.log(`[StopEvent Route] SUCCESS: Processing ${type} for trip ${tripId}, bus ${busId}, stop ${stopId}`);
 
         // Await the promise — do not respond until FCM processes to avoid container suspension
         await sendStopEventNotification(tripId, busId, collegeId, stopId, stopName || '', stopAddress || '', type, arrivalDocId || null, targetStudentIds || null)

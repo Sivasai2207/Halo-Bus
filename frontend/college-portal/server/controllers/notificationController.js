@@ -433,11 +433,27 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
             const token = data.fcmToken;
             if (token && typeof token === 'string' && token.length > 10) {
                 tokens.push(token);
-                console.log(` - Found student ${doc.id}`);
             }
         });
+        
+        // Diagnostic fallback: if no students found for bus, check if ANY students exist for this college
+        if (studentDocsMap.size === 0) {
+            console.log(`[StopEvent] No students found for bus ${busId}. Checking ANY students for college ${collegeId}...`);
+            const collegeSnap = await studentsRef.where('collegeId', '==', collegeId).limit(5).get();
+            console.log(`[StopEvent] Diagnostic: Found ${collegeSnap.size} total students for college ${collegeId}`);
+            collegeSnap.forEach(doc => {
+                const data = doc.data();
+                console.log(` - Student ${doc.id}: assignedBusId="${data.assignedBusId}", favorited=${JSON.stringify(data.favoriteBusIds || [])}`);
+            });
+        }
 
         console.log(`[StopEvent] Found ${tokens.length} valid tokens for bus ${busId}`);
+        if (tokens.length === 0 && studentDocsMap.size > 0) {
+            console.log(`[StopEvent] DEBUG: ${studentDocsMap.size} students found but NONE had valid fcmTokens.`);
+            studentDocsMap.forEach((doc, id) => {
+                console.log(` - Student ${id} (collegeId: ${doc.data().collegeId}): fcmToken is ${doc.data().fcmToken ? 'PRESENT but invalid' : 'MISSING'}`);
+            });
+        }
 
         if (tokens.length > 0) {
             // Send in batches of 500 (FCM multicast limit)

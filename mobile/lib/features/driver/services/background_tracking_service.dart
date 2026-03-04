@@ -170,7 +170,7 @@ void onStart(ServiceInstance service) async {
         if (distToNextStop <= nextStopRadius && !hasArrivedCurrent) {
           await prefs.setBool('has_arrived_current', true);
           BackgroundTrackingService._handleArrivalEntry(
-              prefs, collegeId, busId, tripId, nextStopId, position);
+              prefs, collegeId, busId, tripId, nextStopId, nextStopName, position);
         } else if (distToNextStop > (nextStopRadius + 30) &&
             hasArrivedCurrent) {
           await prefs.setBool('has_arrived_current', false);
@@ -359,7 +359,7 @@ class IosLocationTracker {
             if (distToNextStop <= nextStopRadius && !hasArrivedCurrent) {
               await prefs.setBool('has_arrived_current', true);
               BackgroundTrackingService._handleArrivalEntry(
-                  prefs, collegeId, busId, tripId, nextStopId, position);
+                  prefs, collegeId, busId, tripId, nextStopId, nextStopName, position);
             } else if (distToNextStop > (nextStopRadius + 30) &&
                 hasArrivedCurrent) {
               await prefs.setBool('has_arrived_current', false);
@@ -613,6 +613,7 @@ class BackgroundTrackingService {
     String busId,
     String tripId,
     String stopId,
+    String stopName,
     Position p,
   ) async {
     try {
@@ -627,7 +628,9 @@ class BackgroundTrackingService {
         'stopProgress.stops.$stopId.arrivedAt': FieldValue.serverTimestamp(),
       });
 
-      _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", prefs: prefs);
+      _notifyServer(tripId, busId, collegeId, stopId, "ARRIVED", 
+          stopName: stopName,
+          prefs: prefs);
     } catch (e) {
       debugPrint("[Tracker] _handleArrivalEntry error: $e");
     }
