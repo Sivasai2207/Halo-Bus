@@ -3,7 +3,9 @@ import { db } from '../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const getBaseUrl = () => {
-    const url = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
+    // If VITE_API_URL is missing, use /api for production (proxied) or localhost for dev
+    const isProd = import.meta.env.PROD;
+    const url = import.meta.env.VITE_API_URL || (isProd ? '/api' : 'http://127.0.0.1:3001/api');
     return url.endsWith('/api') ? url : `${url}/api`;
 };
 
