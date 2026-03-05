@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/config/env.dart';
 import '../models/location_point.dart';
+import '../models/user_profile.dart';
 
 class ApiDataSource {
   final Dio _dio;
@@ -243,10 +244,12 @@ class ApiDataSource {
       debugPrint('[ApiDataSource] getTodayAttendance failed: $e');
       return [];
     }
+  }
+
   /// Fetch students assigned to a specific bus.
   Future<List<UserProfile>> getBusStudents(String busId) async {
     try {
-      final response = await _dio.get('/api/driver/buses/$busId/students');
+      final response = await _dio.get('${Env.apiUrl}/api/driver/buses/$busId/students');
       if (response.data != null && response.data['success'] == true) {
         final List studentsList = response.data['data'] as List;
         return studentsList.map((s) => UserProfile.fromJson(s)).toList();
@@ -270,7 +273,7 @@ class ApiDataSource {
     try {
       // We'll use the existing notify endpoint which backend can route to absentee logic
       await _dio.post(
-        '/api/driver/trips/$tripId/attendance/notify',
+        '${Env.apiUrl}/api/driver/trips/$tripId/attendance/notify',
         data: {
           'studentId': studentId,
           'busId': busId,
@@ -283,7 +286,6 @@ class ApiDataSource {
       debugPrint('[ApiDataSource] notifyNotBoarded success: $studentId');
     } catch (e) {
       debugPrint('[ApiDataSource] notifyNotBoarded failed: $e');
-      // No rethrow — we don't want to crash trip finalization
     }
   }
 }

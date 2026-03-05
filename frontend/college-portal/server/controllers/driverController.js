@@ -693,7 +693,7 @@ const historyUpload = async (req, res) => {
 const notifyStudentAttendance = async (req, res) => {
     try {
         const { tripId } = req.params;
-        const { studentId, busId, direction, isChecked, busNumber } = req.body;
+        const { studentId, busId, direction, isChecked, busNumber, reason } = req.body;
 
         if (!studentId || !busId) {
             return res.status(400).json({ success: false, message: 'Missing required parameters' });
@@ -705,7 +705,8 @@ const notifyStudentAttendance = async (req, res) => {
             direction,
             isChecked,
             busNumber,
-            tripId
+            tripId,
+            reason
         });
 
         res.status(200).json({ success: true, message: 'Notification sent' });

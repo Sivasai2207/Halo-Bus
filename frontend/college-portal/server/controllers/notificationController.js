@@ -558,10 +558,20 @@ const sendStudentAttendanceNotification = async ({ studentId, busId, direction, 
         const student = studentDoc.data();
         if (!student.fcmToken) return;
 
-        const title = direction === 'pickup' ? "Safe Boarding ✅" : "Drop-off Complete ✅";
-        const body = direction === 'pickup'
-            ? `${student.name || 'Your child'} has boarded Bus ${busNumber} safely.`
-            : `${student.name || 'Your child'} has been dropped off from Bus ${busNumber} safely.`;
+        const { reason } = arguments[0]; // Access reason if passed in the object
+
+        let title, body;
+        if (isChecked === false || reason === 'NOT_BOARDED') {
+            title = "Boarding Alert ⚠️";
+            body = direction === 'pickup'
+                ? `Not Boarded: ${student.name || 'Your child'} did not board Bus ${busNumber} today.`
+                : `Not Dropped: ${student.name || 'Your child'} was not dropped off from Bus ${busNumber} today.`;
+        } else {
+            title = direction === 'pickup' ? "Safe Boarding ✅" : "Drop-off Complete ✅";
+            body = direction === 'pickup'
+                ? `${student.name || 'Your child'} has boarded Bus ${busNumber} safely.`
+                : `${student.name || 'Your child'} has been dropped off from Bus ${busNumber} safely.`;
+        }
 
         const payload = {
             notification: { title, body },
