@@ -116,7 +116,7 @@ class DriverLocationService {
             avgSpeedMph: compressed.isNotEmpty ? (sumSpeedMph / compressed.length).round() : 0,
             pointsCount: compressed.length,
             path: compressed,
-            attendance: attendanceList.isNotEmpty ? attendanceList : null,
+            attendance: attendanceList,
           );
           
           uploaded = true;

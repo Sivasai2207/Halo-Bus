@@ -164,14 +164,18 @@ class NotificationService {
 
   static Future<void> _showFromRemoteMessage(RemoteMessage message) async {
     final title = message.notification?.title ??
-        message.data['title'] as String? ??
+        (message.data['title'] as String?) ??
         'Bus Update';
-    final body = message.notification?.body ??
-        message.data['body'] as String? ??
-        '';
+    String? body = message.notification?.body ?? (message.data['body'] as String?);
 
-    // Skip if both are empty
-    if (title.isEmpty && body.isEmpty) return;
+    // If body is null but title exists, we show the title.
+    // If both are missing, we don't show a blank notification.
+    if (body == null && (message.notification?.title == null && message.data['title'] == null)) {
+      return;
+    }
+
+    // Default body if title exists but body doesn't
+    body ??= 'Tap to see details';
 
     final type = message.data['type'] as String? ?? '';
     final int id = '${type}_$body'.hashCode.abs() % 100000;
