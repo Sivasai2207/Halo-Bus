@@ -84,6 +84,7 @@ flutter:
     - assets/bus_pin.png
     - assets/onboarding_2.png
     - assets/onboarding_3.png
+    - assets/logo_themed.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -20,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {
       "title": "Welcome to HaloBus",
       "description": "The smartest way to track your college bus in real-time.",
-      "image": "", // First slide uses the bus icon
+      "image": "assets/logo_themed.png",
     },
     {
       "title": "Live Tracking",
@@ -82,15 +82,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             border: Border.all(color: AppColors.borderSubtle),
                             boxShadow: [AppShadows.cardShadow],
                           ),
-                          child: _onboardingData[index]["image"]!.isEmpty
-                              ? Icon(Icons.directions_bus, size: 100, color: AppColors.primary)
-                              : ClipRRect(
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: Image.asset(
-                                    _onboardingData[index]["image"]!,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              _onboardingData[index]["image"]!,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 48),
                         Text(
