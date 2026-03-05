@@ -18,7 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> _onboardingData = [
     {
-      "title": "Welcome to Traco",
+      "title": "Welcome to HaloBus",
       "description": "The smartest way to track your college bus in real-time.",
     },
     {
