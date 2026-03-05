@@ -57,6 +57,40 @@ class TripFinalizer {
       final apiDS = ApiDataSource(dio, FirebaseFirestore.instance);
       final firestoreDS = FirestoreDataSource(FirebaseFirestore.instance);
 
+      // 3. TRIGGER: "Not Boarded" notifications for students who weren't marked
+      try {
+        final direction = prefs.getString('track_direction') ?? 'pickup';
+        final attendanceList = prefs.getStringList('shared_attendance_${tripId}_$direction') ?? [];
+        
+        // Fetch bus details to get bus number
+        final busDoc = await FirebaseFirestore.instance.collection('buses').doc(busId).get();
+        final busNumber = busDoc.data()?['busNumber'] ?? busId;
+
+        // Fetch all students assigned to this bus
+        final allBusStudents = await apiDS.getBusStudents(busId);
+        
+        if (allBusStudents.isNotEmpty) {
+          final markedIds = attendanceList.toSet();
+          final absentStudents = allBusStudents.where((s) => !markedIds.contains(s.id)).toList();
+          
+          if (absentStudents.isNotEmpty) {
+            debugPrint('[TripFinalizer] Notifying ${absentStudents.length} students who did not board');
+            for (final student in absentStudents) {
+              await apiDS.notifyNotBoarded(
+                tripId: tripId,
+                studentId: student.id,
+                busId: busId,
+                direction: direction,
+                busNumber: busNumber,
+              );
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("[TripFinalizer] Optional not-boarded notification step failed: $e");
+        // Non-blocking error
+      }
+
       try {
         await apiDS.endTrip(collegeId, tripId, busId);
         debugPrint("[TripFinalizer] API endTrip success");

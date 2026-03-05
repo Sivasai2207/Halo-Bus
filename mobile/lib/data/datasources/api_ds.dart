@@ -243,6 +243,48 @@ class ApiDataSource {
       debugPrint('[ApiDataSource] getTodayAttendance failed: $e');
       return [];
     }
+  /// Fetch students assigned to a specific bus.
+  Future<List<UserProfile>> getBusStudents(String busId) async {
+    try {
+      final response = await _dio.get('/api/driver/buses/$busId/students');
+      if (response.data != null && response.data['success'] == true) {
+        final List studentsList = response.data['data'] as List;
+        return studentsList.map((s) => UserProfile.fromJson(s)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ApiDataSource] getBusStudents failed: $e');
+      return [];
+    }
+  }
+
+  /// Trigger a "Not Boarded" notification for a specific student.
+  /// This can be called at the end of a trip for students who weren't marked.
+  Future<void> notifyNotBoarded({
+    required String tripId,
+    required String studentId,
+    required String busId,
+    required String direction,
+    required String busNumber,
+  }) async {
+    try {
+      // We'll use the existing notify endpoint which backend can route to absentee logic
+      await _dio.post(
+        '/api/driver/trips/$tripId/attendance/notify',
+        data: {
+          'studentId': studentId,
+          'busId': busId,
+          'direction': direction,
+          'isChecked': false, // false denotes not boarded/absent
+          'busNumber': busNumber,
+          'reason': 'NOT_BOARDED',
+        },
+      );
+      debugPrint('[ApiDataSource] notifyNotBoarded success: $studentId');
+    } catch (e) {
+      debugPrint('[ApiDataSource] notifyNotBoarded failed: $e');
+      // No rethrow — we don't want to crash trip finalization
+    }
   }
 }
 
