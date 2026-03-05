@@ -13,7 +13,7 @@ const checkInit = (res) => {
     return true;
 };
 
-const { checkProximityAndNotify, sendTripEndedNotification, sendStudentAttendanceNotification } = require('./notificationController');
+const { checkProximityAndNotify, sendTripEndedNotification, sendStudentAttendanceNotification, sendNotBoardedBulkNotification } = require('./notificationController');
 // @desc    Get available buses for the driver's college
 // @route   GET /api/driver/buses
 // @access  Private (Driver)
@@ -257,8 +257,8 @@ const endTrip = async (req, res) => {
         // 2. Update Bus Status (Canonical: IDLE)
         batch.update(busRef, {
             status: 'IDLE',
-            activeTripId: null,      // Explicitly null for clarity
-            currentTripId: null,     // Legacy field support
+            activeTripId: null,
+            currentTripId: null,
             currentRoadName: '',
             currentStreetName: '',
             currentSpeed: 0,
@@ -267,14 +267,78 @@ const endTrip = async (req, res) => {
             liveTrackBuffer: [],
             trackingMode: admin.firestore.FieldValue.delete(),
             nextStopId: admin.firestore.FieldValue.delete(),
-            completedStops: [],      // Reset completed stops
+            completedStops: [],
             lastUpdated: new Date().toISOString()
         });
 
+        // 3. Process Absentees: Notify and Record NOT_BOARDED status
+        // Identification Logic
+        const attendedStudents = [
+            ...(tripData.pickedUpStudents || []),
+            ...(tripData.droppedOffStudents || [])
+        ];
+
+        const allBusStudents = await db.collection('students')
+            .where('collegeId', '==', req.collegeId)
+            .where('assignedBusId', '==', busId)
+            .get();
+
+        const pendingAbsenteeDocs = [];
+        allBusStudents.forEach(doc => {
+            if (!attendedStudents.includes(doc.id)) {
+                pendingAbsenteeDocs.push(doc);
+            }
+        });
+
+        if (pendingAbsenteeDocs.length > 0) {
+            console.log(`[endTrip] Identified ${pendingAbsenteeDocs.length} absentees. Notifying...`);
+            
+            // 3a. NOTIFY (Sequence Strict)
+            const busNumber = tripData.busNumber || busId;
+            const direction = tripData.direction || 'pickup';
+            await sendNotBoardedBulkNotification(
+                pendingAbsenteeDocs,
+                busNumber,
+                direction,
+                tripId,
+                req.collegeId,
+                db,
+                admin,
+                messaging
+            );
+
+            // 3b. RECORD in DB (Batch)
+            const datePrefix = new Date().toISOString().split('T')[0];
+            const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
+            
+            pendingAbsenteeDocs.forEach(doc => {
+                const studentId = doc.id;
+                const studentData = doc.data();
+                const attendanceId = `${datePrefix}__${busId}__${direction}__${studentId}`;
+                const attendanceRef = db.collection('attendance').doc(attendanceId);
+
+                batch.set(attendanceRef, {
+                    tripId,
+                    studentId,
+                    busId: busId,
+                    busNumber,
+                    collegeId: req.collegeId,
+                    driverId: req.user.id,
+                    studentName: studentData.name || 'Unknown Student',
+                    direction,
+                    status: direction === 'pickup' ? 'not_boarded' : 'not_dropped',
+                    absentNotifiedAt: serverTimestamp,
+                    createdAt: serverTimestamp,
+                    updatedAt: serverTimestamp,
+                    pickedUpAt: null,
+                    droppedOffAt: null
+                }, { merge: true });
+            });
+        }
+
         await batch.commit();
 
-
-        // Notify students whose favorite bus this was (Awaited for Vercel reliability)
+        // 4. Trigger Trip Ended cleanup/notification
         await sendTripEndedNotification(tripId, busId, tripData.collegeId || req.collegeId)
             .catch(err => console.error('[endTrip] Trip ended notification failed:', err));
 
@@ -615,66 +679,71 @@ const historyUpload = async (req, res) => {
             console.log(`[historyUpload] INFO: No "present" attendance provided in payload.`);
         }
 
-        // ── B. NOT_BOARDED: always run regardless of whether attendance was empty ──
-        // FIX: moved out of the `if (attendance.length > 0)` block so it always fires.
         try {
+            // ── B. NOT_BOARDED: Instant notification before DB push ────────────────
             const allBusStudents = await db.collection('students')
                 .where('collegeId', '==', req.collegeId)
                 .where('assignedBusId', '==', tripData.busId)
                 .get();
 
-            const pendingTokens = [];
             const pendingStudentDocs = [];
-
             allBusStudents.forEach(doc => {
                 if (!studentIds.includes(doc.id)) {
                     pendingStudentDocs.push(doc);
-                    const sd = doc.data();
-                    if (sd.fcmToken && typeof sd.fcmToken === 'string' && sd.fcmToken.length > 10) {
-                        pendingTokens.push(sd.fcmToken);
-                    }
                 }
             });
 
-            // FCM logic removed — consolidated into sendTripEndedNotification
-            console.log(`[historyUpload] Processing records for ${pendingStudentDocs.length} absent students (Notification deferred to endTrip)`);
-
-            // Write not_boarded / not_dropped records for absent students
-            const nbBatch = db.batch();
-            pendingStudentDocs.forEach(doc => {
-                const studentId = doc.id;
-                const studentData = doc.data();
-                const datePrefix = new Date().toISOString().split('T')[0];
-                const attendanceId = `${datePrefix}__${tripData.busId}__${direction}__${studentId}`;
-                const attendanceRef = db.collection('attendance').doc(attendanceId);
-
-                // Only create if it doesn't exist or overwrite with not_boarded?
-                // Actually, if we are ending the trip, these are the students who DID NOT show up.
-                // We should record them as not_boarded if no record exists for them today yet.
-                nbBatch.set(attendanceRef, {
-                    tripId,
-                    studentId,
-                    busId: tripData.busId,
-                    busNumber,
-                    collegeId: req.collegeId,
-                    driverId: req.user.id,
-                    studentName: studentData.name || 'Unknown Student',
-                    direction,
-                    status: isPickup ? 'not_boarded' : 'not_dropped',
-                    createdAt: serverTimestamp,
-                    updatedAt: serverTimestamp,
-                    pickedUpAt: null,
-                    droppedOffAt: null
-                }, { merge: true });
-            });
             if (pendingStudentDocs.length > 0) {
+                console.log(`[historyUpload] Sending instant 'Not Boarded' notifications for ${pendingStudentDocs.length} students...`);
+                
+                // 1. Await notification delivery (Sequence Strict)
+                await sendNotBoardedBulkNotification(
+                    pendingStudentDocs, 
+                    busNumber, 
+                    direction, 
+                    tripId, 
+                    req.collegeId, 
+                    db, 
+                    admin, 
+                    messaging
+                );
+
+                console.log(`[historyUpload] Notifications sent. Committing absentee records to DB...`);
+
+                // 2. Write not_boarded / not_dropped records to DB
+                const nbBatch = db.batch();
+                pendingStudentDocs.forEach(doc => {
+                    const studentId = doc.id;
+                    const studentData = doc.data();
+                    const datePrefix = new Date().toISOString().split('T')[0];
+                    const attendanceId = `${datePrefix}__${tripData.busId}__${direction}__${studentId}`;
+                    const attendanceRef = db.collection('attendance').doc(attendanceId);
+
+                    nbBatch.set(attendanceRef, {
+                        tripId,
+                        studentId,
+                        busId: tripData.busId,
+                        busNumber,
+                        collegeId: req.collegeId,
+                        driverId: req.user.id,
+                        studentName: studentData.name || 'Unknown Student',
+                        direction,
+                        status: isPickup ? 'not_boarded' : 'not_dropped',
+                        absentNotifiedAt: admin.firestore.FieldValue.serverTimestamp(), // Mark as already notified
+                        createdAt: serverTimestamp,
+                        updatedAt: serverTimestamp,
+                        pickedUpAt: null,
+                        droppedOffAt: null
+                    }, { merge: true });
+                });
+
                 await nbBatch.commit();
-                console.log(`[historyUpload] SUCCESS: Recorded ${pendingStudentDocs.length} absent students as NOT_BOARDED/NOT_DROPPED`);
+                console.log(`[historyUpload] SUCCESS: Recorded ${pendingStudentDocs.length} absent students.`);
             } else {
-                console.log(`[historyUpload] INFO: All assigned students were present. No absent records to create.`);
+                console.log(`[historyUpload] INFO: All assigned students were present.`);
             }
         } catch (pendingErr) {
-            console.error('[historyUpload] Pending students processing error:', pendingErr.message);
+            console.error('[historyUpload] Absentee processing error:', pendingErr.message);
         }
 
         await tripRef.update(updateData);
