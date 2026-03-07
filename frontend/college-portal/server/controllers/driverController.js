@@ -1024,6 +1024,7 @@ async function getBusStudents(req, res) {
                 registerNumber: data.registerNumber || '',
                 rollNumber: data.rollNumber || '',
                 assignedBusId: data.assignedBusId || null,
+                photoUrl: data.photoUrl || null,
             };
         });
 

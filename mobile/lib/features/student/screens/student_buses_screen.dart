@@ -55,19 +55,15 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
               const SizedBox(height: 24),
               Text("Driver Details", style: AppTypography.h2),
               const SizedBox(height: 24),
-              _buildDetailRow(Icons.person_rounded, "Driver Name", bus.driverName ?? "Unassigned"),
+              _buildDetailRow(
+                Icons.person_rounded, 
+                "Driver Name", 
+                bus.driverName ?? "Unassigned",
+                leading: bus.driverPhotoUrl != null 
+                  ? ProfileAvatar(photoUrl: bus.driverPhotoUrl, name: bus.driverName, radius: 24)
+                  : null,
+              ),
               const SizedBox(height: 16),
-              if (bus.driverPhotoUrl != null) ...[
-                Row(
-                  children: [
-                    ProfileAvatar(photoUrl: bus.driverPhotoUrl, name: bus.driverName, radius: 40),
-                    const SizedBox(width: 16),
-                    Text("Profile Photo", style: AppTypography.caption),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-
               _buildDetailRow(Icons.email_rounded, "Email", bus.driverEmail ?? "Not Available"),
               const SizedBox(height: 16),
               _buildDetailRow(Icons.location_on_rounded, "Current Location", locationText),
@@ -79,24 +75,37 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, {Widget? leading}) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primarySoft,
-            borderRadius: BorderRadius.circular(10),
+        if (leading != null) ...[
+          leading,
+          const SizedBox(width: 16),
+        ] else ...[
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 22),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 18),
-        ),
-        const SizedBox(width: 14),
+          const SizedBox(width: 14),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: AppTypography.caption),
-              Text(value, style: AppTypography.bodyLg.copyWith(color: AppColors.textPrimary)),
+              const SizedBox(height: 2),
+              Text(
+                value, 
+                style: AppTypography.bodyLg.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
