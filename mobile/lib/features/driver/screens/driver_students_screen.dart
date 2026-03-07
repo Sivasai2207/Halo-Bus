@@ -5,12 +5,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mobile/core/theme/colors.dart';
-import 'package:mobile/core/theme/typography.dart';
-import 'package:mobile/core/widgets/app_scaffold.dart';
-import 'package:mobile/data/providers.dart';
-import 'package:mobile/data/models/user_profile.dart';
-import 'package:mobile/data/datasources/api_ds.dart';
+import 'package:halobus/core/theme/colors.dart';
+import 'package:halobus/core/theme/typography.dart';
+import 'package:halobus/core/widgets/app_scaffold.dart';
+import 'package:halobus/data/providers.dart';
+import 'package:halobus/data/models/user_profile.dart';
+import 'package:halobus/data/datasources/api_ds.dart';
 
 class DriverStudentsScreen extends ConsumerStatefulWidget {
   const DriverStudentsScreen({super.key});
