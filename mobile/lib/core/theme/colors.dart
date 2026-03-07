@@ -11,7 +11,7 @@ class AppColors {
   static const Color accentSoft = Color(0x1A7BC8A4);     // Accent 10% — subtle highlights
 
   // === BACKGROUND SYSTEM (Light Mode) ===
-  static const Color bgDeep = Color(0xFFF2FBF6);         // Very light mint — scaffold background
+  static const Color bgDeep = Color(0xFFFFFFFF);         // Pure white to fix grey layer issue
   static const Color bgBase = Color(0xFFFFFFFF);         // Pure white — most surfaces
   static const Color bgSurface = Color(0xFFFFFFFF);      // Elevated Surface — cards
   static const Color bgCard = Color(0xFFFFFFFF);         // Card surface — lists, inputs

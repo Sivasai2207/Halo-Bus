@@ -792,6 +792,7 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
   void _showHandoverOtpDialog(UserProfile student, String activeTripId) {
     final TextEditingController otpController = TextEditingController();
     bool isVerifying = false;
+    String? errorText;
 
     showDialog(
       context: context,
@@ -808,12 +809,18 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                 controller: otpController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '......',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   counterText: '',
+                  errorText: errorText,
                 ),
                 textAlign: TextAlign.center,
+                onChanged: (_) {
+                  if (errorText != null) {
+                    setModalState(() => errorText = null);
+                  }
+                },
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
               ),
             ],
@@ -827,8 +834,14 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
               onPressed: isVerifying
                   ? null
                   : () async {
-                      if (otpController.text.length != 6) return;
-                      setModalState(() => isVerifying = true);
+                      if (otpController.text.length != 6) {
+                        setModalState(() => errorText = 'Enter 6 digits');
+                        return;
+                      }
+                      setModalState(() {
+                        isVerifying = true;
+                        errorText = null;
+                      });
                       try {
                         final apiDS = await _buildApiDataSource();
                         await apiDS.verifyHandoverOTP(
@@ -847,27 +860,14 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                         }
                       } catch (e) {
                         if (mounted) {
-                          setModalState(() => isVerifying = false);
-                          String errorMsg = e.toString();
+                          String newErrorMsg = e.toString();
                           if (e is DioException) {
-                            errorMsg = e.response?.data?['message'] ?? e.message ?? e.toString();
+                            newErrorMsg = e.response?.data?['message'] ?? e.message ?? e.toString();
                           }
-                          
-                          if (mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Verification Failed'),
-                                content: Text(errorMsg),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
+                          setModalState(() {
+                            isVerifying = false;
+                            errorText = newErrorMsg;
+                          });
                         }
                       }
                     },
