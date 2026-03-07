@@ -21,39 +21,6 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
   String _searchQuery = "";
   String _filter = "All";
 
-  Future<void> _showCallDialog(BuildContext context, Bus bus) async {
-    final phone = bus.driverPhone ?? "Not provided";
-    
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.bgSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("Call Driver", style: AppTypography.h2),
-        content: Text(
-          "Call ${bus.driverName ?? 'the driver'}?\n\nPhone: $phone",
-          style: AppTypography.bodyMd,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text("Cancel", style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text("Call", style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && phone != "Not provided") {
-      final uri = Uri.parse("tel:$phone");
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
-    }
-  }
 
   void _showDetailsSheet(BuildContext context, Bus bus) {
     final isTripActive = bus.status == 'ON_ROUTE' || bus.status == 'ACTIVE';
@@ -89,8 +56,7 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
               const SizedBox(height: 24),
               _buildDetailRow(Icons.person_rounded, "Driver Name", bus.driverName ?? "Unassigned"),
               const SizedBox(height: 16),
-              _buildDetailRow(Icons.phone_rounded, "Phone", bus.driverPhone ?? "Not Available"),
-              const SizedBox(height: 16),
+
               _buildDetailRow(Icons.email_rounded, "Email", bus.driverEmail ?? "Not Available"),
               const SizedBox(height: 16),
               _buildDetailRow(Icons.location_on_rounded, "Current Location", locationText),
@@ -313,7 +279,7 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
                         }
                       },
                       onDetails: () => _showDetailsSheet(context, bus),
-                      onCall: () => _showCallDialog(context, bus),
+
                       onTrack: () => context.push('/student/track', extra: bus.id),
                     );
                   },
@@ -334,7 +300,7 @@ class StudentBusCard extends StatelessWidget {
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
   final VoidCallback onDetails;
-  final VoidCallback onCall;
+
   final VoidCallback onTrack;
 
   const StudentBusCard({
@@ -343,7 +309,7 @@ class StudentBusCard extends StatelessWidget {
     required this.isFavorite,
     required this.onToggleFavorite,
     required this.onDetails,
-    required this.onCall,
+
     required this.onTrack,
   });
 
@@ -441,24 +407,6 @@ class StudentBusCard extends StatelessWidget {
                     style: AppTypography.bodyMd.copyWith(color: AppColors.textPrimary),
                   ),
                 ),
-                if (bus.driverPhone != null)
-                  // Call Button — Accessibility: Min 48px hit area
-                  InkWell(
-                    onTap: onCall,
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      width: 48, height: 48,
-                      alignment: Alignment.center,
-                      child: Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.phone_rounded, color: AppColors.primary, size: 14),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

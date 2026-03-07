@@ -23,12 +23,6 @@ class TrackBottomSheet extends StatelessWidget {
     this.driverPhone,
   });
 
-  Future<void> _makeCall(String phone) async {
-    final Uri uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,18 +134,7 @@ class TrackBottomSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (driverPhone != null && driverPhone!.isNotEmpty)
-                    IconButton(
-                      onPressed: () => _makeCall(driverPhone!),
-                      icon: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.phone, color: AppColors.success, size: 20),
-                      ),
-                    ),
+
                 ],
               ),
             ),
