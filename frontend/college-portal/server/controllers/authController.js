@@ -20,7 +20,8 @@ const generateToken = (id, role, collegeId) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = async (req, res) => {
-    const { email, password, orgSlug } = req.body;
+    const { email: rawEmail, password, orgSlug } = req.body;
+    const email = String(rawEmail || '').toLowerCase().trim();
 
     try {
         // -------------------------
@@ -82,8 +83,7 @@ const loginUser = async (req, res) => {
         // -------------------------
         // 2. Try Students Collection
         // -------------------------
-        const normalizedEmail = String(email || '').toLowerCase().trim();
-        let studentsQuery = db.collection('students').where('email', '==', normalizedEmail);
+        let studentsQuery = db.collection('students').where('email', '==', email);
 
         // Optimization: prevent cross-college login if orgSlug is known
         if (orgSlug) {
@@ -166,7 +166,8 @@ const loginUser = async (req, res) => {
 // @route   POST /api/auth/register-owner
 // @access  Public (Should ideally be protected by a secret)
 const registerOwner = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email: rawEmail, password } = req.body;
+    const email = String(rawEmail || '').toLowerCase().trim();
 
     try {
         const usersRef = db.collection('users');
@@ -238,7 +239,8 @@ const googleLogin = async (req, res) => {
     try {
         // Verify Firebase ID Token
         const decodedToken = await admin.auth().verifyIdToken(token);
-        const { email, name, uid } = decodedToken;
+        const { email: rawEmail, name, uid } = decodedToken;
+        const email = String(rawEmail || '').toLowerCase().trim();
 
         const usersRef = db.collection('users');
         const snapshot = await usersRef.where('email', '==', email).limit(1).get();
@@ -430,7 +432,8 @@ const searchColleges = async (req, res) => {
 // @route   POST /api/auth/student/login
 // @access  Public
 const studentLogin = async (req, res) => {
-    const { email, password, orgSlug } = req.body;
+    const { email: rawEmail, password, orgSlug } = req.body;
+    const email = String(rawEmail || '').toLowerCase().trim();
 
     try {
         // 1. Find college by slug
@@ -449,11 +452,10 @@ const studentLogin = async (req, res) => {
         }
 
         // 2. Find student by email and collegeId
-        const normalizedEmail = String(email || '').toLowerCase().trim();
         const studentsRef = db.collection('students');
         const snapshot = await studentsRef
             .where('collegeId', '==', collegeId)
-            .where('email', '==', normalizedEmail)
+            .where('email', '==', email)
             .limit(1)
             .get();
 
