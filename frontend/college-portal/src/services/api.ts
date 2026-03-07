@@ -3,8 +3,13 @@ import { db } from '../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const getBaseUrl = () => {
-    const url = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
-    return url.endsWith('/api') ? url : `${url}/api`;
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (envUrl) {
+        return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+    }
+    // Fallback for Vercel: Use relative path if no URL is provided
+    // This allows Vercel redirects/rewrites to handle the routing
+    return '/api';
 };
 
 const api = axios.create({
