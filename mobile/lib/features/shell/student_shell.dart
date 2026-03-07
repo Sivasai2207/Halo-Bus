@@ -14,7 +14,8 @@ class StudentShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentIndex = _calculateSelectedIndex(context);
 
-    return AppScaffold(
+    return Scaffold(
+      backgroundColor: AppColors.bgDeep,
       body: child,
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(

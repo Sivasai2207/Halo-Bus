@@ -146,16 +146,13 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
     final profileAsync = ref.watch(userProfileProvider);
     
     if (collegeId == null || collegeId.isEmpty) {
-      return AppScaffold(
-        body: Center(child: Text("No college selected", style: AppTypography.bodyMd)),
-      );
+      return Center(child: Text("No college selected", style: AppTypography.bodyMd));
     }
     
     final busesAsync = ref.watch(busesProvider(collegeId));
 
-    return AppScaffold(
-      body: SafeArea(
-        child: Column(
+    return SafeArea(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Title

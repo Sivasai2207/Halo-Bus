@@ -86,121 +86,119 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
     
     final busesAsync = ref.watch(busesProvider(collegeId));
     
-    return AppScaffold(
-      body: Column(
-        children: [
-          // Header
-          profileAsync.when(
-            data: (profile) => StudentHomeHeader(
-              studentName: profile?.name ?? "Student",
-              collegeName: collegeName,
-            ),
-            loading: () => StudentHomeHeader(studentName: "Loading...", collegeName: collegeName),
-            error: (_, __) => StudentHomeHeader(studentName: "Student", collegeName: collegeName),
+    return Column(
+      children: [
+        // Header
+        profileAsync.when(
+          data: (profile) => StudentHomeHeader(
+            studentName: profile?.name ?? "Student",
+            collegeName: collegeName,
           ),
-          
-          // Main Content — Performance: Using CustomScrollView for scroll-linked effects
-          Expanded(
-            child: RefreshIndicator(
-              color: AppColors.primary,
-              backgroundColor: AppColors.bgCard,
-              onRefresh: () async {
-                ref.invalidate(busesProvider(collegeId));
-                ref.invalidate(userProfileProvider);
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          // 1. Mini Map - Extracted for rebuild isolation
-                          HomeMiniMap(studentLocation: _studentLocation),
-                          const SizedBox(height: 24),
-                          // 2. Search Card
-                          SearchBusCard(
-                            onTap: () => context.push('/student/buses'),
-                          ),
-                          const SizedBox(height: 24),
-                          // 3. Favorites Header
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "MY FAVORITES",
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.textTertiary,
-                                letterSpacing: 1.2,
-                              ),
+          loading: () => StudentHomeHeader(studentName: "Loading...", collegeName: collegeName),
+          error: (_, __) => StudentHomeHeader(studentName: "Student", collegeName: collegeName),
+        ),
+        
+        // Main Content — Performance: Using CustomScrollView for scroll-linked effects
+        Expanded(
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.bgCard,
+            onRefresh: () async {
+              ref.invalidate(busesProvider(collegeId));
+              ref.invalidate(userProfileProvider);
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        // 1. Mini Map - Extracted for rebuild isolation
+                        HomeMiniMap(studentLocation: _studentLocation),
+                        const SizedBox(height: 24),
+                        // 2. Search Card
+                        SearchBusCard(
+                          onTap: () => context.push('/student/buses'),
+                        ),
+                        const SizedBox(height: 24),
+                        // 3. Favorites Header
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "MY FAVORITES",
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textTertiary,
+                              letterSpacing: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ),
                   ),
-                  
-                  // 4. Favorites List - Performance: Lazy loading via SliverList
-                  busesAsync.when(
-                    data: (buses) {
-                      if (buses.isEmpty) {
-                         return SliverPadding(
-                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                           sliver: SliverToBoxAdapter(child: _EmptyBusesState()),
-                         );
-                      }
-                      
-                      final profile = profileAsync.value;
-                      final favoriteBuses = buses.where((b) => profile?.favoriteBusIds.contains(b.id) ?? false).toList();
-                      
-                      if (favoriteBuses.isEmpty) {
-                        return SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          sliver: SliverToBoxAdapter(
-                            child: _NoFavoritesState(onFind: () => context.go('/student/buses')),
-                          ),
-                        );
-                      }
-                      
+                ),
+                
+                // 4. Favorites List - Performance: Lazy loading via SliverList
+                busesAsync.when(
+                  data: (buses) {
+                    if (buses.isEmpty) {
+                       return SliverPadding(
+                         padding: const EdgeInsets.symmetric(horizontal: 20),
+                         sliver: SliverToBoxAdapter(child: _EmptyBusesState()),
+                       );
+                    }
+                    
+                    final profile = profileAsync.value;
+                    final favoriteBuses = buses.where((b) => profile?.favoriteBusIds.contains(b.id) ?? false).toList();
+                    
+                    if (favoriteBuses.isEmpty) {
                       return SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final bus = favoriteBuses[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16.0),
-                                child: LiveTrackerCard(
-                                  busNumber: bus.busNumber,
-                                  currentStatus: bus.currentRoadName ?? bus.status,
-                                  licensePlate: bus.plateNumber,
-                                  isLive: bus.status == 'ON_ROUTE' || bus.status == 'ACTIVE',
-                                  onTap: () {
-                                    context.push('/student/track', extra: bus.id);
-                                  },
-                                ),
-                              );
-                            },
-                            childCount: favoriteBuses.length,
-                          ),
+                        sliver: SliverToBoxAdapter(
+                          child: _NoFavoritesState(onFind: () => context.go('/student/buses')),
                         ),
                       );
-                    },
-                    loading: () => const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    ),
-                    error: (err, _) => SliverToBoxAdapter(child: _ErrorState(message: "$err")),
+                    }
+                    
+                    return SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final bus = favoriteBuses[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: LiveTrackerCard(
+                                busNumber: bus.busNumber,
+                                currentStatus: bus.currentRoadName ?? bus.status,
+                                licensePlate: bus.plateNumber,
+                                isLive: bus.status == 'ON_ROUTE' || bus.status == 'ACTIVE',
+                                onTap: () {
+                                  context.push('/student/track', extra: bus.id);
+                                },
+                              ),
+                            );
+                          },
+                          childCount: favoriteBuses.length,
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                   ),
-                  
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
-              ),
+                  error: (err, _) => SliverToBoxAdapter(child: _ErrorState(message: "$err")),
+                ),
+                
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

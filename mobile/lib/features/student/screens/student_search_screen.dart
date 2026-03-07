@@ -40,91 +40,89 @@ class _StudentSearchScreenState extends ConsumerState<StudentSearchScreen> {
     final collegeId = ref.watch(selectedCollegeIdProvider);
     final busesAsync = ref.watch(busesProvider(collegeId ?? ""));
 
-    return AppScaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Search Bar
-            TextField(
-              controller: _searchController,
-              style: AppTypography.textTheme.bodyMedium,
-              decoration: InputDecoration(
-                hintText: 'Search by bus no, plate...',
-                hintStyle: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 12, 0),
-                  child: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
-                ),
-                prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 20),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            style: AppTypography.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              hintText: 'Search by bus no, plate...',
+              hintStyle: AppTypography.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              prefixIcon: const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 12, 0),
+                child: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
               ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 20),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            const SizedBox(height: 24),
-            
-            // Recent / Results
-            Expanded(
-              child: busesAsync.when(
-                data: (buses) {
-                  final filtered = buses.where((bus) {
-                    final query = _searchQuery;
-                    return bus.busNumber.toLowerCase().contains(query) ||
-                           bus.plateNumber.toLowerCase().contains(query);
-                  }).toList();
+          ),
+          const SizedBox(height: 24),
+          
+          // Recent / Results
+          Expanded(
+            child: busesAsync.when(
+              data: (buses) {
+                final filtered = buses.where((bus) {
+                  final query = _searchQuery;
+                  return bus.busNumber.toLowerCase().contains(query) ||
+                         bus.plateNumber.toLowerCase().contains(query);
+                }).toList();
 
-                  if (filtered.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _searchQuery.isEmpty ? "No buses available" : "No buses found",
-                        style: AppTypography.textTheme.bodyMedium,
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final bus = filtered[index];
-                      // Map backend status to UI status
-                      BusStatus status = BusStatus.offline;
-                      if (bus.status == 'ON_ROUTE') status = BusStatus.live;
-                      if (bus.status == 'ACTIVE') status = BusStatus.active;
-                      
-                      final profile = ref.watch(userProfileProvider).value;
-                      final isFav = profile?.favoriteBusIds.contains(bus.id) ?? false;
-
-                      return BusSearchResultTile(
-                        busNumber: bus.busNumber,
-                        routeName: bus.assignedRouteId != null ? 'Route ${bus.busNumber}' : "No Route", 
-                        plateNumber: bus.plateNumber,
-                        status: status,
-                        busId: bus.id,
-                        initialIsFavorite: isFav,
-                        onTap: () => context.push('/student/track', extra: bus.id),
-                      );
-                    },
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Text(
+                      _searchQuery.isEmpty ? "No buses available" : "No buses found",
+                      style: AppTypography.textTheme.bodyMedium,
+                    ),
                   );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Error: $err')),
-              ),
+                }
+
+                return ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final bus = filtered[index];
+                    // Map backend status to UI status
+                    BusStatus status = BusStatus.offline;
+                    if (bus.status == 'ON_ROUTE') status = BusStatus.live;
+                    if (bus.status == 'ACTIVE') status = BusStatus.active;
+                    
+                    final profile = ref.watch(userProfileProvider).value;
+                    final isFav = profile?.favoriteBusIds.contains(bus.id) ?? false;
+
+                    return BusSearchResultTile(
+                      busNumber: bus.busNumber,
+                      routeName: bus.assignedRouteId != null ? 'Route ${bus.busNumber}' : "No Route", 
+                      plateNumber: bus.plateNumber,
+                      status: status,
+                      busId: bus.id,
+                      initialIsFavorite: isFav,
+                      onTap: () => context.push('/student/track', extra: bus.id),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

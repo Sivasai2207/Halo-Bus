@@ -113,7 +113,8 @@ service cloud.firestore {
     // ─── User Notifications (Student Bell Icon) ──────────────────────
     match /user_notifications/{notificationId} {
       // Students read/update/delete their own notifications
-      allow read, update, delete: if isAuthenticated() && resource.data.studentId == request.auth.uid;
+      allow get, update, delete: if isAuthenticated() && resource.data.studentId == request.auth.uid;
+      allow list: if isAuthenticated() && request.query.limit <= 50; 
       // Server creates via Admin SDK
       allow create: if false;
     }

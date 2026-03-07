@@ -614,6 +614,19 @@ const sendTripEndedNotification = async (tripId, busId, collegeId) => {
                                 data: { absentNotifiedAt: admin.firestore.FieldValue.serverTimestamp() }
                             });
                         }
+                        
+                        // Store in user_notifications for the bell icon in student app
+                        attendanceUpdates.push({
+                            ref: db.collection('user_notifications').doc(),
+                            data: {
+                                studentId,
+                                title: absenteeTitle,
+                                body: absenteeBody,
+                                type: 'TRIP_ENDED',
+                                read: false,
+                                createdAt: admin.firestore.FieldValue.serverTimestamp()
+                            }
+                        });
                     } catch (e) {
                         console.error(`[AbsenteeCheck] Error for ${studentId}:`, e.message);
                     }
