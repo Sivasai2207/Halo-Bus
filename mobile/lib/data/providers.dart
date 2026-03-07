@@ -17,6 +17,7 @@ import 'repositories/user_repo.dart';
 import 'models/bus.dart';
 import 'models/user_profile.dart';
 import 'models/user_notification.dart';
+import '../core/services/photo_service.dart';
 
 // External Services
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
@@ -202,4 +203,19 @@ final userNotificationsProvider = StreamProvider<List<UserNotification>>((ref) {
 final unreadNotificationsCountProvider = Provider<int>((ref) {
   final notifications = ref.watch(userNotificationsProvider).value ?? [];
   return notifications.where((n) => !n.read).length;
+});
+
+final photoServiceProvider = Provider<PhotoService>((ref) {
+  final service = PhotoService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+final driverProfileProvider = StreamProvider.family<UserProfile?, String>((ref, driverId) {
+  final firestoreDS = ref.read(firestoreDataSourceProvider);
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(driverId)
+      .snapshots()
+      .map((snap) => snap.exists ? UserProfile.fromFirestore(snap) : null);
 });

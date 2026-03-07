@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/profile_avatar.dart';
 
 class TrackBottomSheet extends StatelessWidget {
   final String eta;
@@ -11,6 +12,7 @@ class TrackBottomSheet extends StatelessWidget {
   final bool isUserInBus;
   final String? driverName;
   final String? driverPhone;
+  final String? driverPhotoUrl;
 
   const TrackBottomSheet({
     super.key,
@@ -21,6 +23,7 @@ class TrackBottomSheet extends StatelessWidget {
     this.isUserInBus = false,
     this.driverName,
     this.driverPhone,
+    this.driverPhotoUrl,
   });
 
 
@@ -100,14 +103,10 @@ class TrackBottomSheet extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.person, color: AppColors.primary, size: 28),
+                  ProfileAvatar(
+                    photoUrl: driverPhotoUrl,
+                    name: driverName,
+                    radius: 24,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

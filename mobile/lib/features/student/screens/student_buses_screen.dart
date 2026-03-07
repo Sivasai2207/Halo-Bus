@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/widgets/pulsing_dot.dart';
+import '../../../core/widgets/profile_avatar.dart';
 import '../../../data/providers.dart';
 import '../../../data/models/bus.dart';
 
@@ -56,6 +57,16 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
               const SizedBox(height: 24),
               _buildDetailRow(Icons.person_rounded, "Driver Name", bus.driverName ?? "Unassigned"),
               const SizedBox(height: 16),
+              if (bus.driverPhotoUrl != null) ...[
+                Row(
+                  children: [
+                    ProfileAvatar(photoUrl: bus.driverPhotoUrl, name: bus.driverName, radius: 40),
+                    const SizedBox(width: 16),
+                    Text("Profile Photo", style: AppTypography.caption),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
 
               _buildDetailRow(Icons.email_rounded, "Email", bus.driverEmail ?? "Not Available"),
               const SizedBox(height: 16),
@@ -395,10 +406,10 @@ class StudentBusCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                CircleAvatar(
+                ProfileAvatar(
+                  photoUrl: bus.driverPhotoUrl,
+                  name: bus.driverName,
                   radius: 14,
-                  backgroundColor: AppColors.primarySoft,
-                  child: const Icon(Icons.person_rounded, size: 14, color: AppColors.primary),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

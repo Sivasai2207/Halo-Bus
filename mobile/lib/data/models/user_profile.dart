@@ -12,6 +12,7 @@ class UserProfile {
   final String? activeBusId;
   final String? activeBusNumber;
   final DateTime? lastBusUpdate;
+  final String? photoUrl;
 
   UserProfile({
     required this.id,
@@ -25,6 +26,7 @@ class UserProfile {
     this.activeBusId,
     this.activeBusNumber,
     this.lastBusUpdate,
+    this.photoUrl,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -43,6 +45,7 @@ class UserProfile {
       lastBusUpdate: data['lastBusUpdate'] is Timestamp 
         ? (data['lastBusUpdate'] as Timestamp).toDate() 
         : (data['lastBusUpdate'] != null ? DateTime.tryParse(data['lastBusUpdate'].toString()) : null),
+      photoUrl: data['photoUrl']?.toString(),
     );
   }
 
@@ -59,6 +62,7 @@ class UserProfile {
       activeBusId: json['activeBusId']?.toString(),
       activeBusNumber: json['activeBusNumber']?.toString(),
       lastBusUpdate: json['lastBusUpdate'] != null ? DateTime.tryParse(json['lastBusUpdate'].toString()) : null,
+      photoUrl: json['photoUrl']?.toString(),
     );
   }
 }

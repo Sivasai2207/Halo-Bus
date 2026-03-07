@@ -19,4 +19,18 @@ class UserRepository {
 
     return UserProfile.fromFirestore(doc);
   }
+
+  Future<void> updatePhotoUrl({
+    required String collegeId,
+    required String uid,
+    required String role,
+    required String photoUrl,
+  }) {
+    return _firestoreDataSource.updateUserPhotoUrl(
+      collegeId: collegeId,
+      uid: uid,
+      role: role,
+      photoUrl: photoUrl,
+    );
+  }
 }

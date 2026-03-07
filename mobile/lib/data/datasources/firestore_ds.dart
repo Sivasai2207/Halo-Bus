@@ -124,6 +124,7 @@ class FirestoreDataSource {
           driverName: userData['name'] ?? bus.driverName,
           driverPhone: userData['phone'] ?? userData['phoneNumber'] ?? bus.driverPhone,
           driverEmail: userData['email'] ?? bus.driverEmail,
+          driverPhotoUrl: userData['photoUrl'] ?? bus.driverPhotoUrl,
           currentDriverId: bus.currentDriverId,
           assignedRouteId: bus.assignedRouteId,
           completedStops: bus.completedStops,
@@ -705,5 +706,31 @@ class FirestoreDataSource {
         return _firestore.collection('students').doc(uid).snapshots().map((doc) => UserProfile.fromFirestore(doc));
       }
     });
+  }
+
+  /// Updates only the photoUrl field on the user document.
+  /// Works for both 'users' and 'students' collections.
+  Future<void> updateUserPhotoUrl({
+    required String collegeId,
+    required String uid,
+    required String role,
+    required String photoUrl,
+  }) async {
+    try {
+      // Drivers live in 'users' collection; students may be in 'students'
+      if (role == 'student') {
+        final studentDoc = _firestore.collection('students').doc(uid);
+        final snap = await studentDoc.get();
+        if (snap.exists) {
+          await studentDoc.update({'photoUrl': photoUrl});
+          return;
+        }
+      }
+      // Default: users collection
+      await _firestore.collection('users').doc(uid).update({'photoUrl': photoUrl});
+    } catch (e) {
+      debugPrint('[FirestoreDS] updateUserPhotoUrl error: $e');
+      rethrow;
+    }
   }
 }

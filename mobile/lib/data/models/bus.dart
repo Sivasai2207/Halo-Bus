@@ -13,6 +13,7 @@ class Bus {
   final String? driverName;
   final String? driverPhone;
   final String? driverEmail;
+  final String? driverPhotoUrl;
   final String? currentDriverId;
   final String? assignedRouteId;
   final List<String> completedStops;
@@ -37,6 +38,7 @@ class Bus {
     this.driverName,
     this.driverPhone,
     this.driverEmail,
+    this.driverPhotoUrl,
     this.currentDriverId,
     this.assignedRouteId,
     this.completedStops = const [],
@@ -78,6 +80,7 @@ class Bus {
       driverName: data['driverName'],
       driverPhone: data['driverPhone'],
       driverEmail: data['driverEmail'],
+      driverPhotoUrl: data['driverPhotoUrl'],
       currentDriverId: data['currentDriverId'],
       assignedRouteId: data['assignedRouteId'],
       completedStops: (data['completedStops'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],

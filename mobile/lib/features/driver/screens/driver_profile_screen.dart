@@ -1,25 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:typed_data';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../data/providers.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/profile_avatar.dart';
+import '../../../core/widgets/photo_picker_sheet.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
 
-class DriverProfileScreen extends ConsumerWidget {
+class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
 
-  String _initials(String? name) {
-    if (name == null || name.isEmpty) return "D";
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    return parts[0][0].toUpperCase();
+  @override
+  ConsumerState<DriverProfileScreen> createState() => _DriverProfileScreenState();
+}
+
+class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
+  bool _isUploading = false;
+
+  Future<void> _handlePhotoUpload({required bool fromCamera}) async {
+    final photoService = ref.read(photoServiceProvider);
+    final profile = ref.read(userProfileProvider).value;
+    if (profile == null) return;
+
+    try {
+      final xFile = fromCamera
+          ? await photoService.pickFromCamera()
+          : await photoService.pickFromGallery();
+
+      if (xFile == null) return; // user cancelled
+
+      setState(() => _isUploading = true);
+
+      final bytes = await xFile.readAsBytes();
+      final croppedBytes = await photoService.detectFaceAndCrop(xFile.path, bytes);
+      final url = await photoService.uploadCroppedPhoto(
+        userId: profile.id,
+        role: profile.role,
+        imageBytes: croppedBytes,
+      );
+
+      // Save URL to Firestore
+      final userRepo = ref.read(userRepositoryProvider);
+      await userRepo.updatePhotoUrl(
+        collegeId: profile.collegeId,
+        uid: profile.id,
+        role: profile.role,
+        photoUrl: url,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  void _showPicker() {
+    PhotoPickerSheet.show(
+      context,
+      onCamera: () => _handlePhotoUpload(fromCamera: true),
+      onGallery: () => _handlePhotoUpload(fromCamera: false),
+    );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
 
     return AppScaffold(
@@ -53,21 +111,20 @@ class DriverProfileScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(colors: [AppColors.primary, AppColors.accent]),
-                            shape: BoxShape.circle,
-                          ),
-                          child: CircleAvatar(
-                            radius: 28,
-                            backgroundColor: AppColors.bgCard,
-                            child: Text(
-                              _initials(profile.name),
-                              style: AppTypography.h2.copyWith(color: AppColors.primary),
-                            ),
-                          ),
-                        ),
+                        _isUploading
+                            ? const SizedBox(
+                                width: 64,
+                                height: 64,
+                                child: Center(
+                                  child: CircularProgressIndicator(color: AppColors.primary),
+                                ),
+                              )
+                            : ProfileAvatar(
+                                photoUrl: profile.photoUrl,
+                                name: profile.name,
+                                radius: 32,
+                                onTap: _showPicker,
+                              ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -89,6 +146,14 @@ class DriverProfileScreen extends ConsumerWidget {
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
                                   ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Tap photo to update',
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.primary.withValues(alpha: 0.7),
+                                  fontSize: 11,
                                 ),
                               ),
                             ],

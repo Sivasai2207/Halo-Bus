@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:halobus/core/theme/colors.dart';
 import 'package:halobus/core/theme/typography.dart';
 import 'package:halobus/core/widgets/app_scaffold.dart';
+import 'package:halobus/core/widgets/profile_avatar.dart';
 import 'package:halobus/data/providers.dart';
 import 'package:halobus/data/models/user_profile.dart';
 import 'package:halobus/data/datasources/api_ds.dart';
@@ -537,16 +538,10 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
+                  ProfileAvatar(
+                    photoUrl: student.photoUrl,
+                    name: student.name,
                     radius: 30,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: Text(
-                      (student.name ?? 'S')[0].toUpperCase(),
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold),
-                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -919,12 +914,10 @@ class StudentItem extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withOpacity(0.1),
-          child: Text(
-            (student.name ?? 'S')[0].toUpperCase(),
-            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-          ),
+        leading: ProfileAvatar(
+          photoUrl: student.photoUrl,
+          name: student.name,
+          radius: 20,
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

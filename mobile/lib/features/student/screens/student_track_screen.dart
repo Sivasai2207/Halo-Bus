@@ -725,6 +725,7 @@ class _StudentTrackScreenState extends ConsumerState<StudentTrackScreen> {
                         totalTime: _totalTime,
                         isUserInBus: _isUserInBus,
                         driverName: _currentBus?.driverName,
+                        driverPhotoUrl: _currentBus?.driverPhotoUrl,
                       ),
                       if (_currentRoute != null)
                         Padding(
