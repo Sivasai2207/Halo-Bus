@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -38,9 +40,7 @@ class ProfileAvatar extends StatelessWidget {
             child: CircleAvatar(
               radius: radius,
               backgroundColor: AppColors.surface,
-              backgroundImage: (photoUrl != null && photoUrl!.isNotEmpty)
-                  ? NetworkImage(photoUrl!)
-                  : null,
+              backgroundImage: _buildImageProvider(),
               child: (photoUrl == null || photoUrl!.isEmpty)
                   ? Text(
                       _initials(),
@@ -75,5 +75,20 @@ class ProfileAvatar extends StatelessWidget {
         ],
       ),
     );
+  }
+  ImageProvider? _buildImageProvider() {
+    if (photoUrl == null || photoUrl!.isEmpty) return null;
+    
+    if (photoUrl!.startsWith('data:image')) {
+      try {
+        final String base64Content = photoUrl!.split(',').last;
+        return MemoryImage(base64Decode(base64Content));
+      } catch (e) {
+        debugPrint('[ProfileAvatar] Base64 decode error: $e');
+        return null;
+      }
+    }
+    
+    return NetworkImage(photoUrl!);
   }
 }

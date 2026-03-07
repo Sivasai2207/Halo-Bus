@@ -37,19 +37,15 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
 
       final bytes = await xFile.readAsBytes();
       final croppedBytes = await photoService.detectFaceAndCrop(xFile.path, bytes);
-      final url = await photoService.uploadCroppedPhoto(
-        userId: profile.id,
-        role: profile.role,
-        imageBytes: croppedBytes,
-      );
+      final base64Image = photoService.encodeToBase64(croppedBytes);
 
-      // Save URL to Firestore
+      // Save Base64 to Firestore
       final userRepo = ref.read(userRepositoryProvider);
       await userRepo.updatePhotoUrl(
         collegeId: profile.collegeId,
         uid: profile.id,
         role: profile.role,
-        photoUrl: url,
+        photoUrl: base64Image,
       );
 
       if (mounted) {

@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 
@@ -92,23 +92,10 @@ class PhotoService {
     }
   }
 
-  /// Uploads cropped image to Firebase Storage and returns the download URL.
-  Future<String> uploadCroppedPhoto({
-    required String userId,
-    required String role,
-    required Uint8List imageBytes,
-  }) async {
-    // Storage path: profile_photos/{role}/{userId}.jpg
-    final String storagePath = 'profile_photos/$role/$userId.jpg';
-    final Reference ref = FirebaseStorage.instance.ref(storagePath);
-
-    final UploadTask task = ref.putData(
-      imageBytes,
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
-
-    final TaskSnapshot snapshot = await task;
-    return await snapshot.ref.getDownloadURL();
+  /// Converts image bytes to a Base64-encoded Data URI.
+  String encodeToBase64(Uint8List bytes) {
+    final String base64String = base64Encode(bytes);
+    return 'data:image/jpeg;base64,$base64String';
   }
 
   void dispose() {

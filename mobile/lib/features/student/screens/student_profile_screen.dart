@@ -36,18 +36,14 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
 
       final bytes = await xFile.readAsBytes();
       final croppedBytes = await photoService.detectFaceAndCrop(xFile.path, bytes);
-      final url = await photoService.uploadCroppedPhoto(
-        userId: profile.id,
-        role: profile.role,
-        imageBytes: croppedBytes,
-      );
+      final base64Image = photoService.encodeToBase64(croppedBytes);
 
       final userRepo = ref.read(userRepositoryProvider);
       await userRepo.updatePhotoUrl(
         collegeId: profile.collegeId,
         uid: profile.id,
         role: profile.role,
-        photoUrl: url,
+        photoUrl: base64Image,
       );
 
       if (mounted) {
