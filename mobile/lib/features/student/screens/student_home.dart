@@ -59,12 +59,13 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
     final collegeName = selectedCollege?['collegeName'] ?? collegeId?.toUpperCase() ?? "";
     
     if (collegeId == null || collegeId.isEmpty) {
-      return AppScaffold(
-        body: Center(
+      return Container(
+        color: AppColors.bgDeep,
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.account_balance_rounded, size: 64, color: AppColors.textTertiary),
+              const Icon(Icons.account_balance_rounded, size: 64, color: AppColors.textTertiary),
               const SizedBox(height: 16),
               Text("No Institution Selected", style: AppTypography.h2),
               const SizedBox(height: 8),

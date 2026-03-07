@@ -146,185 +146,184 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
     final profileAsync = ref.watch(userProfileProvider);
     
     if (collegeId == null || collegeId.isEmpty) {
-      return Center(child: Text("No college selected", style: AppTypography.bodyMd));
+      return const Center(child: Text("No college selected"));
     }
     
     final busesAsync = ref.watch(busesProvider(collegeId));
 
     return SafeArea(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text('All Buses', style: AppTypography.h1),
-            ),
-            const SizedBox(height: 16),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Text('All Buses', style: AppTypography.h1),
+          ),
+          const SizedBox(height: 16),
 
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.bgCard,
-                  borderRadius: BorderRadius.circular(14),
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.bgCard,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: TextField(
+                style: AppTypography.bodyLg.copyWith(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Bus no, plate, driver...',
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 12, 0),
+                    child: Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 20),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
                 ),
-                child: TextField(
-                  style: AppTypography.bodyLg.copyWith(color: AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'Bus no, plate, driver...',
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 0, 12, 0),
-                      child: Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 20),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: ['All', 'Live', 'Active', 'Offline'].map((label) {
+                final isSelected = _filter == label;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: InkWell(
+                    onTap: () => setState(() => _filter = label),
+                    borderRadius: BorderRadius.circular(100),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : AppColors.bgCard,
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primary : AppColors.borderSubtle,
+                        ),
+                        boxShadow: isSelected ? [AppShadows.primaryGlow] : [],
+                      ),
+                      child: Text(
+                        label,
+                        style: AppTypography.label.copyWith(
+                          color: isSelected ? AppColors.textInverse : AppColors.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
-                  onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-                ),
-              ),
+                );
+              }).toList(),
             ),
-            const SizedBox(height: 12),
-
-            // Filter Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: ['All', 'Live', 'Active', 'Offline'].map((label) {
-                  final isSelected = _filter == label;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: InkWell(
-                      onTap: () => setState(() => _filter = label),
-                      borderRadius: BorderRadius.circular(100),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Height ~44-48px
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : AppColors.bgCard,
-                          borderRadius: BorderRadius.circular(100),
-                          border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.borderSubtle,
-                          ),
-                          boxShadow: isSelected ? [AppShadows.primaryGlow] : [],
-                        ),
-                        child: Text(
-                          label,
-                          style: AppTypography.label.copyWith(
-                            color: isSelected ? AppColors.textInverse : AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
+          ),
+          const SizedBox(height: 16),
+          
+          Expanded(
+            child: busesAsync.when(
+              data: (buses) {
+                if (buses.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.directions_bus_outlined, size: 48, color: AppColors.textTertiary),
+                        const SizedBox(height: 12),
+                        Text("No buses available", style: AppTypography.bodyMd),
+                      ],
                     ),
                   );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            Expanded(
-              child: busesAsync.when(
-                data: (buses) {
-                  if (buses.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.directions_bus_outlined, size: 48, color: AppColors.textTertiary),
-                          const SizedBox(height: 12),
-                          Text("No buses available", style: AppTypography.bodyMd),
-                        ],
-                      ),
-                    );
-                  }
+                }
 
-                  final filteredBuses = buses.where((b) {
-                    final matchesSearch = b.busNumber.toLowerCase().contains(_searchQuery) || 
-                           (b.driverName ?? "").toLowerCase().contains(_searchQuery) ||
-                           b.plateNumber.toLowerCase().contains(_searchQuery);
-                    return matchesSearch && _matchesFilter(b);
-                  }).toList();
+                final filteredBuses = buses.where((b) {
+                  final matchesSearch = b.busNumber.toLowerCase().contains(_searchQuery) || 
+                         (b.driverName ?? "").toLowerCase().contains(_searchQuery) ||
+                         b.plateNumber.toLowerCase().contains(_searchQuery);
+                  return matchesSearch && _matchesFilter(b);
+                }).toList();
 
-                  if (filteredBuses.isEmpty) {
-                    return Center(child: Text("No matching buses found", style: AppTypography.bodyMd));
-                  }
+                if (filteredBuses.isEmpty) {
+                  return Center(child: Text("No matching buses found", style: AppTypography.bodyMd));
+                }
 
-                  final profile = profileAsync.value;
+                final profile = profileAsync.value;
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    itemCount: filteredBuses.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final bus = filteredBuses[index];
-                      final isFavorite = profile?.favoriteBusIds.contains(bus.id) ?? false;
-                      
-                      return StudentBusCard(
-                        bus: bus,
-                        isFavorite: isFavorite,
-                        onToggleFavorite: () async {
-                          if (profile != null) {
-                            final currentFavorites = profile.favoriteBusIds;
-                            final isCurrentlyFav = currentFavorites.contains(bus.id);
-                            
-                            if (!isCurrentlyFav && currentFavorites.isNotEmpty) {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  backgroundColor: AppColors.bgSurface,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  title: Text("Switch Favorite?", style: AppTypography.h2),
-                                  content: Text(
-                                    "You can only favorite one bus. Replace with Bus ${bus.busNumber}?",
-                                    style: AppTypography.bodyMd,
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(false),
-                                      child: const Text("Cancel", style: TextStyle(color: AppColors.textSecondary)),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(true),
-                                      child: const Text("Switch", style: TextStyle(color: AppColors.primary)),
-                                    ),
-                                  ],
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  itemCount: filteredBuses.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final bus = filteredBuses[index];
+                    final isFavorite = profile?.favoriteBusIds.contains(bus.id) ?? false;
+                    
+                    return StudentBusCard(
+                      bus: bus,
+                      isFavorite: isFavorite,
+                      onToggleFavorite: () async {
+                        if (profile != null) {
+                          final currentFavorites = profile.favoriteBusIds;
+                          final isCurrentlyFav = currentFavorites.contains(bus.id);
+                          
+                          if (!isCurrentlyFav && currentFavorites.isNotEmpty) {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: AppColors.bgSurface,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: Text("Switch Favorite?", style: AppTypography.h2),
+                                content: Text(
+                                  "You can only favorite one bus. Replace with Bus ${bus.busNumber}?",
+                                  style: AppTypography.bodyMd,
                                 ),
-                              );
-                              if (confirmed != true) return;
-                            }
-                            
-                            await ref.read(firestoreDataSourceProvider).toggleFavoriteBus(
-                              profile.id, bus.id, !isCurrentlyFav,
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(false),
+                                    child: const Text("Cancel", style: TextStyle(color: AppColors.textSecondary)),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(true),
+                                    child: const Text("Switch", style: TextStyle(color: AppColors.primary)),
+                                  ),
+                                ],
+                              ),
                             );
+                            if (confirmed != true) return;
                           }
-                        },
-                        onDetails: () => _showDetailsSheet(context, bus),
-                        onCall: () => _showCallDialog(context, bus),
-                        onTrack: () => context.push('/student/track', extra: bus.id),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                error: (err, stack) => Center(child: Text("Error: $err", style: AppTypography.bodyMd)),
-              ),
+                          
+                          await ref.read(firestoreDataSourceProvider).toggleFavoriteBus(
+                            profile.id, bus.id, !isCurrentlyFav,
+                          );
+                        }
+                      },
+                      onDetails: () => _showDetailsSheet(context, bus),
+                      onCall: () => _showCallDialog(context, bus),
+                      onTrack: () => context.push('/student/track', extra: bus.id),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              error: (err, stack) => Center(child: Text("Error: $err", style: AppTypography.bodyMd)),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

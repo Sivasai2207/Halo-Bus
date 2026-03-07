@@ -33,16 +33,9 @@ class StudentHomeHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primary.withOpacity(0.05),
-            AppColors.bgBase,
-          ],
-        ),
-        border: const Border(
+      decoration: const BoxDecoration(
+        color: AppColors.bgBase,
+        border: Border(
           bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
       ),

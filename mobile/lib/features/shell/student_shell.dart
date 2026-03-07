@@ -17,42 +17,37 @@ class StudentShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
       body: child,
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.bgBase.withOpacity(0.85),
-              border: const Border(top: BorderSide(color: AppColors.borderSubtle)),
+      bottomNavigationBar: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: AppColors.bgBase,
+          border: const Border(top: BorderSide(color: AppColors.borderSubtle)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
+              label: 'Home',
+              isSelected: currentIndex == 0,
+              onTap: () => context.go('/student'),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home_rounded,
-                  label: 'Home',
-                  isSelected: currentIndex == 0,
-                  onTap: () => context.go('/student'),
-                ),
-                _NavItem(
-                  icon: Icons.directions_bus_outlined,
-                  activeIcon: Icons.directions_bus_rounded,
-                  label: 'Buses',
-                  isSelected: currentIndex == 1,
-                  onTap: () => context.go('/student/buses'),
-                ),
-                _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
-                  label: 'Profile',
-                  isSelected: currentIndex == 2,
-                  onTap: () => context.go('/student/profile'),
-                ),
-              ],
+            _NavItem(
+              icon: Icons.directions_bus_outlined,
+              activeIcon: Icons.directions_bus_rounded,
+              label: 'Buses',
+              isSelected: currentIndex == 1,
+              onTap: () => context.go('/student/buses'),
             ),
-          ),
+            _NavItem(
+              icon: Icons.person_outline_rounded,
+              activeIcon: Icons.person_rounded,
+              label: 'Profile',
+              isSelected: currentIndex == 2,
+              onTap: () => context.go('/student/profile'),
+            ),
+          ],
         ),
       ),
     );

@@ -21,7 +21,10 @@ class AppScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Ensure light status bar icons on dark background
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+    // Use dark status bar icons on light background to avoid system-applied gray scrims
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark.copyWith(
+      statusBarColor: Colors.transparent,
+    ));
 
     return Scaffold(
       backgroundColor: backgroundColor ?? AppColors.bgDeep,
