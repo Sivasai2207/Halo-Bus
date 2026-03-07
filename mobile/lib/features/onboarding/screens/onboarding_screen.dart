@@ -18,16 +18,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> _onboardingData = [
     {
-      "title": "Welcome to Traco",
+      "title": "Welcome to HaloBus",
       "description": "The smartest way to track your college bus in real-time.",
+      "image": "assets/logo_themed.png",
     },
     {
       "title": "Live Tracking",
       "description": "Never miss your bus again. Get live updates and accurate ETAs.",
+      "image": "assets/onboarding_2.png",
     },
     {
       "title": "Stay Informed",
       "description": "Receive instant notifications for delays and route changes.",
+      "image": "assets/onboarding_3.png",
     },
   ];
 
@@ -79,7 +82,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             border: Border.all(color: AppColors.borderSubtle),
                             boxShadow: [AppShadows.cardShadow],
                           ),
-                          child: Icon(Icons.directions_bus, size: 100, color: AppColors.primary),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              _onboardingData[index]["image"]!,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 48),
                         Text(
