@@ -1,12 +1,12 @@
-# REQUIREMENTS: Global Trip Fix & Attendance Sync
+# Requirements: Migration Arc
 
-## In-Scope
-- **Notification Reliability:** Fix 'Arriving', 'Arrived', and 'Skipped' notification delivery.
-- **Student App UX:** Resolve "Stops List" not loading on first open of the tracking screen.
-- **State Synchronization:** Ensure "Completed" stops stay completed and upcoming stops update correctly after a skip.
-- **Attendance Isolation:** Separate Pickup and Dropoff attendance records completely (independent cycles).
-- **Admin Visibility:** Restore Attendance Reporting in the College Portal (Admin Panel).
+## Scope
+1. **College Portal UI Theme Migration**: Transfer theme, colors, cards, and overall UI components across all screens from `Bannu Bus Application` to `HaloBus Live Tracking`.
+2. **Firebase Rules**: Copy the complete architecture and Firebase rules related to OTP generation and validation.
+3. **Mobile App OTP & Notifications**: Transfer the complete OTP implementation and notification system into the mobile apps (Driver and Student).
+4. **Student App Bell Icon**: Migrate the bell icon functionality from the student app.
+5. **Admin Portal Dropoff Logic & Attendance**: Transfer the complete logic for the new dropoff status, OTP verification/validation (including error handling: "Wrong OTP entered. Please retry."), OTP notifications, and attendance logic from the web admin portal, driver app, and student app.
 
-## Out-of-Scope
-- Major UI redesigns.
-- Adding new user roles.
+## Out of Scope
+- Modifying features that exist solely in HaloBus and were not part of the Bannu Bus functionality suite.
+- Overwriting environment-specific variables, keys, or distinct deployment details belonging explicitly to the HaloBus production tier.

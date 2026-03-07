@@ -465,12 +465,30 @@ const sendStopEventNotification = async (tripId, busId, collegeId, stopId, stopN
             read: false,
         });
 
-        // Mark as processed to prevent re-sending
+        // Write to stopArrivals collection for student app real-time listener
+        const arrivalData = {
+            tripId,
+            busId,
+            collegeId,
+            stopId,
+            stopName: stopName || '',
+            type,
+            location: stopName || stopAddress || '',
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            fcmSent: tokens.length > 0,
+            notifiedAt: new Date().toISOString(),
+        };
+
         if (arrivalDocId) {
+            // Update existing doc
             await db.collection('stopArrivals').doc(arrivalDocId).update({
+                ...arrivalData,
                 fcmSent: true,
-                notifiedAt: new Date().toISOString(),
             });
+        } else {
+            // Create new doc so student app Firestore listener picks it up
+            const newDoc = await db.collection('stopArrivals').add(arrivalData);
+            console.log(`[StopEvent] Created stopArrivals doc: ${newDoc.id}`);
         }
 
     } catch (err) {
@@ -489,20 +507,10 @@ const sendStudentAttendanceNotification = async ({ studentId, busId, direction, 
         const student = studentDoc.data();
         if (!student.fcmToken) return;
 
-        const { reason } = arguments[0]; // Access reason if passed in the object
-
-        let title, body;
-        if (isChecked === false || reason === 'NOT_BOARDED') {
-            title = "Boarding Alert ⚠️";
-            body = direction === 'pickup'
-                ? `Not Boarded: ${student.name || 'Your child'} did not board Bus ${busNumber} today.`
-                : `Not Dropped: ${student.name || 'Your child'} was not dropped off from Bus ${busNumber} today.`;
-        } else {
-            title = direction === 'pickup' ? "Safe Boarding ✅" : "Drop-off Complete ✅";
-            body = direction === 'pickup'
-                ? `${student.name || 'Your child'} has boarded Bus ${busNumber} safely.`
-                : `${student.name || 'Your child'} has been dropped off from Bus ${busNumber} safely.`;
-        }
+        const title = direction === 'pickup' ? "Safe Boarding ✅" : "Drop-off Complete ✅";
+        const body = direction === 'pickup'
+            ? `${student.name || 'Your child'} has boarded Bus ${busNumber} safely.`
+            : `${student.name || 'Your child'} has been dropped off from Bus ${busNumber} safely.`;
 
         const payload = {
             notification: { title, body },
@@ -579,14 +587,37 @@ const sendTripEndedNotification = async (tripId, busId, collegeId) => {
             ? `Not Boarded the Bus Today — Bus ${busNumber}`
             : `Not Dropped Off Today — Bus ${busNumber}`;
 
-        const pendingAbsenteeDocs = [];
+        const tokensAbsentee = [];
+        const studentUpdates = [];
+        const attendanceUpdates = [];
+
+        // Identify absent students and check if already notified
+        const absenteeChecks = [];
         studentDocsMap.forEach((doc, studentId) => {
             const data = doc.data();
             const isAssigned = data.assignedBusId === busId;
             const isAbsent = !attendedStudents.includes(studentId);
 
             if (isAssigned && isAbsent) {
-                pendingAbsenteeDocs.push(doc);
+                const attendanceId = `${dateKey}__${busId}__${tripData.direction || 'pickup'}__${studentId}`;
+                absenteeChecks.push((async () => {
+                    try {
+                        const attDoc = await db.collection('attendance').doc(attendanceId).get();
+                        if (attDoc.exists && attDoc.data().absentNotifiedAt) {
+                            return; // Already notified
+                        }
+                        const token = data.fcmToken;
+                        if (token && typeof token === 'string' && token.length > 10) {
+                            tokensAbsentee.push(token);
+                            attendanceUpdates.push({
+                                ref: db.collection('attendance').doc(attendanceId),
+                                data: { absentNotifiedAt: admin.firestore.FieldValue.serverTimestamp() }
+                            });
+                        }
+                    } catch (e) {
+                        console.error(`[AbsenteeCheck] Error for ${studentId}:`, e.message);
+                    }
+                })());
             }
 
             // SILENT UPDATE: Clear student's active bus info for ALL (assigned & favored)
@@ -601,19 +632,41 @@ const sendTripEndedNotification = async (tripId, busId, collegeId) => {
             });
         });
 
-        // Use the centralized bulk logic for personalized names (Awaited for sequence strictness)
-        if (pendingAbsenteeDocs.length > 0) {
-            console.log(`[TripEnded] Delegating to sendNotBoardedBulkNotification for ${pendingAbsenteeDocs.length} absentees`);
-            await sendNotBoardedBulkNotification(
-                pendingAbsenteeDocs,
-                busNumber,
-                tripData.direction || 'pickup',
-                tripId,
-                collegeId,
-                db,
-                admin,
-                messaging
-            );
+        await Promise.all(absenteeChecks);
+
+        // Execute student and attendance updates in batches
+        const finalBatch = db.batch();
+        studentUpdates.forEach(u => finalBatch.update(u.ref, u.data));
+        attendanceUpdates.forEach(u => finalBatch.set(u.ref, u.data, { merge: true }));
+
+        if (studentUpdates.length > 0 || attendanceUpdates.length > 0) {
+            console.log(`[TripEnded] committing ${studentUpdates.length} student updates and ${attendanceUpdates.length} attendance updates...`);
+            await finalBatch.commit();
+        }
+
+        const sendBatch = async (tokens, t, b) => {
+            if (tokens.length === 0) return;
+            for (let i = 0; i < tokens.length; i += 500) {
+                const batch = tokens.slice(i, i + 500);
+                try {
+                    const msg = {
+                        notification: { title: t, body: b },
+                        data: { tripId: tripId || '', busId: busId || '', type: 'TRIP_ENDED' },
+                        android: { priority: 'high', notification: { channelId: 'bus_events', sound: 'default' } },
+                        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+                        tokens: batch,
+                    };
+                    const result = await messaging.sendEachForMulticast(msg);
+                    console.log(`[TripEnded] FCM batch (${t}) sent=${result.successCount} failed=${result.failureCount}`);
+                    cleanupStaleTokens(result, batch, db, admin).catch(err => console.error('[FCM Cleanup]', err.message));
+                } catch (fcmErr) {
+                    console.error('[TripEnded] FCM batch error:', fcmErr.message);
+                }
+            }
+        };
+
+        if (tokensAbsentee.length > 0) {
+            await sendBatch(tokensAbsentee, absenteeTitle, absenteeBody);
         }
 
         // Log to notifications collection
@@ -630,100 +683,11 @@ const sendTripEndedNotification = async (tripId, busId, collegeId) => {
     }
 };
 
-/**
- * Handles sending "Not Boarded" notifications to a list of students in bulk.
- * Awaited by the driverController to ensure notifications are sent before DB commit.
- */
-const sendNotBoardedBulkNotification = async (students, busNumber, direction, tripId, collegeId, db, admin, messaging) => {
-    if (!students || students.length === 0) return;
-
-    try {
-        console.log(`[NotBoardedBulk] Preparing notifications for ${students.length} students on bus ${busNumber}`);
-        
-        const tokens = [];
-        const studentNames = [];
-        const studentIds = [];
-
-        students.forEach(doc => {
-            const data = doc.data();
-            if (data.fcmToken && typeof data.fcmToken === 'string' && data.fcmToken.length > 10) {
-                tokens.push(data.fcmToken);
-                studentNames.push(data.name || 'Student');
-                studentIds.push(doc.id);
-            }
-        });
-
-        if (tokens.length === 0) {
-            console.log('[NotBoardedBulk] No valid tokens found for absentee students.');
-            return;
-        }
-
-        const dateKey = new Date().toISOString().split('T')[0];
-
-        // Send in batches of 500 (standard for FCM multicast)
-        for (let i = 0; i < tokens.length; i += 500) {
-            const tokenBatch = tokens.slice(i, i + 500);
-            const nameBatch = studentNames.slice(i, i + 500);
-            const idBatch = studentIds.slice(i, i + 500);
-
-            // Since multicast sends the SAME body to everyone, we can't put individual names in ONE multicast body.
-            // But the user said: "inform that the {student name} has not boarded the bus".
-            // If we have 10 different students, we need 10 DIFFERENT bodies if we want names in the message.
-            // OR we use a generic body "Your child has not boarded" which is safer for high-load, 
-            // but the user specifically asked for {student name}.
-            
-            // To respect {student name}, we must send individual messages or use a template if supported.
-            // For 500 students, individual sends are slow. But absentee lists are usually small per bus (<50).
-            // Let's do parallel individual sends for accuracy.
-            
-            const sendPromises = tokenBatch.map(async (token, idx) => {
-                const sName = nameBatch[idx];
-                const sId = idBatch[idx];
-                const title = "Boarding Alert ⚠️";
-                const body = direction === 'pickup'
-                    ? `${sName} has not boarded Bus ${busNumber} today.`
-                    : `${sName} was not dropped off from Bus ${busNumber} today.`;
-
-                try {
-                    await messaging.send({
-                        token,
-                        notification: { title, body },
-                        data: { 
-                            type: 'ATTENDANCE', 
-                            tripId: tripId || '', 
-                            studentId: sId, 
-                            direction,
-                            status: 'NOT_BOARDED',
-                            action: 'FLUTTER_NOTIFICATION_CLICK' 
-                        },
-                        android: { priority: 'high', notification: { channelId: 'bus_events', sound: 'default' } },
-                        apns: { payload: { aps: { sound: 'default', badge: 1 } } }
-                    });
-                    
-                    // Mark as notified in attendance collection to prevent duplicates later
-                    const attendanceId = `${dateKey}__${collegeId}__${direction}__${sId}`; // Adjusted ID format if needed
-                    // Actually let the controller handle the ID mapping for consistency.
-                } catch (err) {
-                    console.error(`[NotBoardedBulk] Failed for ${sName}:`, err.message);
-                }
-            });
-
-            await Promise.all(sendPromises);
-        }
-
-        console.log(`[NotBoardedBulk] Successfully dispatched batch of ${tokens.length} notifications.`);
-
-    } catch (error) {
-        console.error('[NotBoardedBulk] CRITICAL ERROR:', error.message);
-    }
-};
-
 module.exports = {
     sendBusStartedNotification,
     checkProximityAndNotify,
     sendStopArrivalNotification,
     sendStopEventNotification,
     sendTripEndedNotification,
-    sendStudentAttendanceNotification,
-    sendNotBoardedBulkNotification
+    sendStudentAttendanceNotification
 };

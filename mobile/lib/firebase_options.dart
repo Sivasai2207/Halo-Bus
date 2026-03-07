@@ -50,20 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAjAHo-Skx630ikYKyF6_oXRZsDTtG8Nas',
-    appId: '1:86666729917:android:9d8b02b12eb3a809921ad4',
-    messagingSenderId: '86666729917',
-    projectId: 'halo-bus',
-    storageBucket: 'halo-bus.firebasestorage.app',
+    apiKey: 'AIzaSyC-nvY6P8VXgosFtYRFjKoZWBvszr38idM',
+    appId: '1:34427841688:android:442e916beeaa5994f434ed',
+    messagingSenderId: '34427841688',
+    projectId: 'live-bus-tracking-2ec59',
+    storageBucket: 'live-bus-tracking-2ec59.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAjAHo-Skx630ikYKyF6_oXRZsDTtG8Nas',
-    appId: '1:86666729917:ios:0c783321d700f3bbf434ed',
-    messagingSenderId: '86666729917',
-    projectId: 'halo-bus',
-    storageBucket: 'halo-bus.firebasestorage.app',
-    iosClientId: '86666729917-168b1q650fjt5j11mbri0i28o0lqpodl.apps.googleusercontent.com',
-    iosBundleId: 'com.halobus.mobile',
+    apiKey: 'AIzaSyCA0m5G1eIdVyUugIF5aUzLnVXhUR3LAUE',
+    appId: '1:34427841688:ios:0c783321d700f3bbf434ed',
+    messagingSenderId: '34427841688',
+    projectId: 'live-bus-tracking-2ec59',
+    storageBucket: 'live-bus-tracking-2ec59.firebasestorage.app',
+    iosClientId: '34427841688-168b1q650fjt5j11mbri0i28o0lqpodl.apps.googleusercontent.com',
+    iosBundleId: 'com.bannu.mobile.mobile',
   );
 }

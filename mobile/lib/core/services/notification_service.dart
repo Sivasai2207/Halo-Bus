@@ -24,14 +24,15 @@ class NotificationService {
 
     // ✅ FIX: requestCriticalPermission ensures iOS shows notifications even
     // in Do Not Disturb mode (important for bus arrival alerts)
-    const DarwinInitializationSettings iosSettings =
+    final DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      // ✅ FIX: Native foreground notifications on iOS 14+ are handled by DarwinNotificationDetails
     );
 
-    const InitializationSettings settings = InitializationSettings(
+    final InitializationSettings settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
@@ -164,18 +165,14 @@ class NotificationService {
 
   static Future<void> _showFromRemoteMessage(RemoteMessage message) async {
     final title = message.notification?.title ??
-        (message.data['title'] as String?) ??
+        message.data['title'] as String? ??
         'Bus Update';
-    String? body = message.notification?.body ?? (message.data['body'] as String?);
+    final body = message.notification?.body ??
+        message.data['body'] as String? ??
+        '';
 
-    // If body is null but title exists, we show the title.
-    // If both are missing, we don't show a blank notification.
-    if (body == null && (message.notification?.title == null && message.data['title'] == null)) {
-      return;
-    }
-
-    // Default body if title exists but body doesn't
-    body ??= 'Tap to see details';
+    // Skip if both are empty
+    if (title.isEmpty && body.isEmpty) return;
 
     final type = message.data['type'] as String? ?? '';
     final int id = '${type}_$body'.hashCode.abs() % 100000;

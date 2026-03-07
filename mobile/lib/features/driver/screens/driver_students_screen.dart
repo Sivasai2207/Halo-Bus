@@ -5,12 +5,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:halobus/core/theme/colors.dart';
-import 'package:halobus/core/theme/typography.dart';
-import 'package:halobus/core/widgets/app_scaffold.dart';
-import 'package:halobus/data/providers.dart';
-import 'package:halobus/data/models/user_profile.dart';
-import 'package:halobus/data/datasources/api_ds.dart';
+import 'package:mobile/core/theme/colors.dart';
+import 'package:mobile/core/theme/typography.dart';
+import 'package:mobile/core/widgets/app_scaffold.dart';
+import 'package:mobile/data/providers.dart';
+import 'package:mobile/data/models/user_profile.dart';
+import 'package:mobile/data/datasources/api_ds.dart';
 
 class DriverStudentsScreen extends ConsumerStatefulWidget {
   const DriverStudentsScreen({super.key});
@@ -43,46 +43,44 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
   }
 
   Future<void> _loadLocalAttendance({String? forcedDirection}) async {
-    final activeTripId = ref.read(activeTripIdProvider).value;
-    final assignedBus = ref.read(assignedBusProvider).value;
-    final profile = ref.read(userProfileProvider).value;
-    
-    if (activeTripId == null) {
-      if (mounted) {
-        setState(() {
-          _lockedIds.clear();
-          _localAttendedIds.clear();
-          _pendingIds.clear();
-          _isLoadingPrefs = false;
-        });
-      }
-      return;
-    }
-
-    // 1. Determine direction first to build the correct cache key
-    String? direction = forcedDirection;
-    if (direction == null) {
-      final tripData = ref.read(tripProvider(activeTripId)).value;
-      if (tripData == null) {
-        debugPrint('[DriverStudentsScreen] Trip data not ready, skipping sync.');
-        return; 
-      }
-      direction = tripData['direction'];
-    }
-    final effectiveDirection = direction ?? 'pickup';
-
-    // 2. Clear state when switching direction or trip
+    // 1. AGGRESSIVE RESET: Clear UI immediately before any async work
     if (mounted) {
       setState(() {
         _lockedIds.clear();
         _localAttendedIds.clear();
         _pendingIds.clear();
+        _isLoadingPrefs = true;
       });
+      debugPrint('[DriverStudentsScreen] State reset triggered');
     }
 
+    final activeTripId = ref.read(activeTripIdProvider).value;
+    final assignedBus = ref.read(assignedBusProvider).value;
+    final profile = ref.read(userProfileProvider).value;
+    
+    if (activeTripId == null) {
+      if (mounted) setState(() => _isLoadingPrefs = false);
+      return;
+    }
+
+    // 2. Determine direction
+    String? direction = forcedDirection;
+    if (direction == null) {
+      final tripData = ref.read(tripProvider(activeTripId)).value;
+      direction = tripData?['direction'];
+    }
+
+    // 3. DIRECTION GUARD: Verify direction is actually known
+    if (direction == null) {
+      debugPrint('[DriverStudentsScreen] Direction unknown, waiting for trip data before sync...');
+      if (mounted) setState(() => _isLoadingPrefs = false);
+      return;
+    }
+
+    final effectiveDirection = direction;
     final driverBusId = assignedBus?.id ?? profile?.assignedBusId;
 
-    // 3. Load from SharedPreferences (local cache/offline safety) using direction-aware key
+    // 4. Load from SharedPreferences using direction-aware key
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = 'shared_attendance_${activeTripId}_$effectiveDirection';
     final localList = prefs.getStringList(cacheKey) ?? [];
@@ -93,29 +91,28 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
       });
     }
 
-    // 4. Load from Backend (source of truth)
+    // 5. Load from Backend (source of truth)
     if (driverBusId != null) {
       try {
-        _currentSyncDirection = effectiveDirection; // Set latest target
+        _currentSyncDirection = effectiveDirection;
         final apiDS = await _buildApiDataSource();
         final remoteList = await apiDS.getTodayAttendance(driverBusId, effectiveDirection);
         
-        // GUARD: If the direction changed while we were waiting for the network, DISCARD.
+        // GUARD: If the direction changed while we were waiting, DISCARD the stale result.
         if (_currentSyncDirection != effectiveDirection) {
-           debugPrint('[DriverStudentsScreen] Discarding stale sync for $effectiveDirection (Now: $_currentSyncDirection)');
+           debugPrint('[DriverStudentsScreen] Discarding stale sync for $effectiveDirection');
            return;
         }
 
         if (mounted) {
           setState(() {
             _lockedIds.clear(); 
-            _localAttendedIds.clear(); // RESET local state before remote sync
+            _localAttendedIds.clear();
             if (remoteList.isNotEmpty) {
               _localAttendedIds.addAll(remoteList);
               _lockedIds.addAll(remoteList);
             }
           });
-          // Update local cache too
           await _saveLocalAttendance(activeTripId, effectiveDirection);
         }
       } catch (e) {
@@ -188,9 +185,9 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
         final collegeId = userProfile.collegeId;
         final activeTripId = ref.watch(activeTripIdProvider).value;
         
-        // Listen for trip changes to trigger re-sync (crucial for trip restart persistence)
+        // Listen for trip changes to trigger re-sync (crucial for trip transition)
         ref.listen(activeTripIdProvider, (previous, next) {
-          if (next.value != previous?.value && next.value != null) {
+          if (next.value != previous?.value) {
             _loadLocalAttendance();
           }
         });
@@ -656,6 +653,26 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                   ],
                 ],
               ),
+              if (activeTripId != null && direction == 'dropoff' && !isLocked) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _handleHandover(student, activeTripId);
+                    },
+                    icon: const Icon(Icons.handshake_outlined),
+                    label: const Text('Handover to neighbor (OTP)'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: const BorderSide(color: Colors.orange),
+                      foregroundColor: Colors.orange[800],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
             ],
           ),
@@ -710,6 +727,156 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+  void _handleHandover(UserProfile student, String activeTripId) async {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Neighbor Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Neighbor Name'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(labelText: 'Phone Number'),
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, {
+              'name': nameController.text,
+              'phone': phoneController.text,
+            }),
+            child: const Text('Next'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+
+    try {
+      final apiDS = await _buildApiDataSource();
+      await apiDS.generateHandoverOTP(
+        tripId: activeTripId,
+        studentId: student.id,
+        neighborName: result['name'],
+        neighborPhone: result['phone'],
+      );
+      
+      if (mounted) {
+        _showHandoverOtpDialog(student, activeTripId);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate OTP: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _showHandoverOtpDialog(UserProfile student, String activeTripId) {
+    final TextEditingController otpController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Text('Verify Handover'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Enter the 6-digit OTP sent to ${student.name}\'s phone to complete the handover.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  hintText: '......',
+                  border: OutlineInputBorder(),
+                  counterText: '',
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isVerifying ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isVerifying
+                  ? null
+                  : () async {
+                      if (otpController.text.length != 6) return;
+                      setModalState(() => isVerifying = true);
+                      try {
+                        final apiDS = await _buildApiDataSource();
+                        await apiDS.verifyHandoverOTP(
+                          tripId: activeTripId,
+                          studentId: student.id,
+                          otp: otpController.text,
+                        );
+                        
+                        if (mounted) {
+                          Navigator.pop(context); // Close dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Handover verified successfully'), backgroundColor: Colors.green),
+                          );
+                          // Refresh attendance state
+                          _loadLocalAttendance();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          setModalState(() => isVerifying = false);
+                          String errorMsg = e.toString();
+                          if (e is DioException) {
+                            errorMsg = e.response?.data?['message'] ?? e.message ?? e.toString();
+                          }
+                          
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Verification Failed'),
+                                content: Text(errorMsg),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+              child: isVerifying
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Verify'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -812,7 +979,7 @@ class StudentItem extends StatelessWidget {
             : SizedBox(
                 width: 48, height: 48,
                 child: IconButton(
-                  icon: Icon(Icons.call, color: AppColors.primary),
+                  icon: const Icon(Icons.call, color: AppColors.primary),
                   onPressed: onCall,
                 ),
               ),

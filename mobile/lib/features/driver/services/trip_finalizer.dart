@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'driver_location_service.dart';
 import '../../../data/datasources/api_ds.dart';
 import '../../../data/datasources/firestore_ds.dart';
-import '../../../data/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TripFinalizer {
@@ -57,11 +56,6 @@ class TripFinalizer {
       
       final apiDS = ApiDataSource(dio, FirebaseFirestore.instance);
       final firestoreDS = FirestoreDataSource(FirebaseFirestore.instance);
-
-      // 3. Note: "Not Boarded" notifications are now handled by the backend 
-      // during the uploadBufferedHistory (history-upload) step to ensure
-      // they are sent BEFORE the attendance records are committed.
-      // This ensures strict sequencing and prevents duplicate logic.
 
       try {
         await apiDS.endTrip(collegeId, tripId, busId);

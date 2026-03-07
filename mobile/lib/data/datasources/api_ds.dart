@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/config/env.dart';
 import '../models/location_point.dart';
-import '../models/user_profile.dart';
 
 class ApiDataSource {
   final Dio _dio;
@@ -134,7 +133,8 @@ class ApiDataSource {
         return List<Map<String, dynamic>>.from(collegesList);
       } catch (apiErr) {
         debugPrint("API search fallback error: $apiErr");
-        return [];
+        // Rethrow so the UI can show the error message (e.g., Quota Exceeded)
+        rethrow;
       }
     }
   }
@@ -245,47 +245,45 @@ class ApiDataSource {
       return [];
     }
   }
-
-  /// Fetch students assigned to a specific bus.
-  Future<List<UserProfile>> getBusStudents(String busId) async {
+  /// Generate a handover OTP for a student.
+  Future<void> generateHandoverOTP({
+    required String tripId,
+    required String studentId,
+    String? neighborName,
+    String? neighborPhone,
+  }) async {
     try {
-      final response = await _dio.get('${Env.apiUrl}/api/driver/buses/$busId/students');
-      if (response.data != null && response.data['success'] == true) {
-        final List studentsList = response.data['data'] as List;
-        return studentsList.map((s) => UserProfile.fromJson(s)).toList();
-      }
-      return [];
+      await _dio.post(
+        '${Env.apiUrl}/api/driver/trips/$tripId/attendance/handover/generate',
+        data: {
+          'studentId': studentId,
+          'neighborName': neighborName,
+          'neighborPhone': neighborPhone,
+        },
+      );
     } catch (e) {
-      debugPrint('[ApiDataSource] getBusStudents failed: $e');
-      return [];
+      debugPrint('[ApiDataSource] generateHandoverOTP failed: $e');
+      rethrow;
     }
   }
 
-  /// Trigger a "Not Boarded" notification for a specific student.
-  /// This can be called at the end of a trip for students who weren't marked.
-  Future<void> notifyNotBoarded({
+  /// Verify a handover OTP for a student.
+  Future<void> verifyHandoverOTP({
     required String tripId,
     required String studentId,
-    required String busId,
-    required String direction,
-    required String busNumber,
+    required String otp,
   }) async {
     try {
-      // We'll use the existing notify endpoint which backend can route to absentee logic
       await _dio.post(
-        '${Env.apiUrl}/api/driver/trips/$tripId/attendance/notify',
+        '${Env.apiUrl}/api/driver/trips/$tripId/attendance/handover/verify',
         data: {
           'studentId': studentId,
-          'busId': busId,
-          'direction': direction,
-          'isChecked': false, // false denotes not boarded/absent
-          'busNumber': busNumber,
-          'reason': 'NOT_BOARDED',
+          'otp': otp,
         },
       );
-      debugPrint('[ApiDataSource] notifyNotBoarded success: $studentId');
     } catch (e) {
-      debugPrint('[ApiDataSource] notifyNotBoarded failed: $e');
+      debugPrint('[ApiDataSource] verifyHandoverOTP failed: $e');
+      rethrow;
     }
   }
 }

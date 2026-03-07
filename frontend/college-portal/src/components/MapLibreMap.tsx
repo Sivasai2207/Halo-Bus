@@ -103,10 +103,10 @@ const getExpectedInterval = (bus: any): number => {
 const getStatusColor = (bus: any): string => {
     const status = bus.currentStatus || bus.status;
     if (status === 'ARRIVED') return '#16a34a';    // green
-    if (status === 'ARRIVING') return '#f97316';   // orange
-    if (status === 'MAINTENANCE') return '#ea580c'; // burnt orange
-    // Default to Black for ON_ROUTE, ACTIVE, MOVING, IDLE, OFFLINE as per user request
-    return '#000000'; 
+    if (status === 'ARRIVING') return '#f59e0b';   // amber
+    if (status === 'MAINTENANCE') return '#ea580c'; // orange
+    if (status === 'ON_ROUTE' || status === 'ACTIVE' || status === 'MOVING') return '#3b82f6'; // blue
+    return '#64748b'; // slate (IDLE/Offline)
 };
 
 // Helper: get status label

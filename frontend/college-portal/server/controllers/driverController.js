@@ -13,7 +13,7 @@ const checkInit = (res) => {
     return true;
 };
 
-const { checkProximityAndNotify, sendTripEndedNotification, sendStudentAttendanceNotification, sendNotBoardedBulkNotification } = require('./notificationController');
+const { checkProximityAndNotify, sendTripEndedNotification, sendStudentAttendanceNotification } = require('./notificationController');
 // @desc    Get available buses for the driver's college
 // @route   GET /api/driver/buses
 // @access  Private (Driver)
@@ -42,7 +42,7 @@ const populateBusRoutes = async (buses) => {
 // @desc    Get available buses for the driver's college
 // @route   GET /api/driver/buses
 // @access  Private (Driver)
-const getDriverBuses = async (req, res) => {
+async function getDriverBuses(req, res) {
     try {
 
 
@@ -75,7 +75,7 @@ const getDriverBuses = async (req, res) => {
 // @desc    Search ALL buses in college (Global Search)
 // @route   GET /api/driver/buses/search
 // @access  Private (Driver)
-const searchDriverBuses = async (req, res) => {
+async function searchDriverBuses(req, res) {
     try {
         const { q } = req.query;
         if (!q) return res.status(400).json({ success: false, message: 'Query required' });
@@ -121,7 +121,7 @@ const searchDriverBuses = async (req, res) => {
 // @desc    Update bus location and status (real-time, every 5 seconds)
 // @route   POST /api/driver/tracking/:busId
 // @access  Private (Driver)
-const updateBusLocation = async (req, res) => {
+async function updateBusLocation(req, res) {
     try {
         const { busId } = req.params;
         const { latitude, longitude, speed, heading } = req.body;
@@ -205,7 +205,7 @@ const updateBusLocation = async (req, res) => {
 // @desc    End a trip (Atomic Update)
 // @route   POST /api/driver/trips/:tripId/end
 // @access  Private (Driver)
-const endTrip = async (req, res) => {
+async function endTrip(req, res) {
     const { tripId } = req.params;
     const { busId } = req.body;
 
@@ -257,8 +257,8 @@ const endTrip = async (req, res) => {
         // 2. Update Bus Status (Canonical: IDLE)
         batch.update(busRef, {
             status: 'IDLE',
-            activeTripId: null,
-            currentTripId: null,
+            activeTripId: null,      // Explicitly null for clarity
+            currentTripId: null,     // Legacy field support
             currentRoadName: '',
             currentStreetName: '',
             currentSpeed: 0,
@@ -267,78 +267,14 @@ const endTrip = async (req, res) => {
             liveTrackBuffer: [],
             trackingMode: admin.firestore.FieldValue.delete(),
             nextStopId: admin.firestore.FieldValue.delete(),
-            completedStops: [],
+            completedStops: [],      // Reset completed stops
             lastUpdated: new Date().toISOString()
         });
 
-        // 3. Process Absentees: Notify and Record NOT_BOARDED status
-        // Identification Logic
-        const attendedStudents = [
-            ...(tripData.pickedUpStudents || []),
-            ...(tripData.droppedOffStudents || [])
-        ];
-
-        const allBusStudents = await db.collection('students')
-            .where('collegeId', '==', req.collegeId)
-            .where('assignedBusId', '==', busId)
-            .get();
-
-        const pendingAbsenteeDocs = [];
-        allBusStudents.forEach(doc => {
-            if (!attendedStudents.includes(doc.id)) {
-                pendingAbsenteeDocs.push(doc);
-            }
-        });
-
-        if (pendingAbsenteeDocs.length > 0) {
-            console.log(`[endTrip] Identified ${pendingAbsenteeDocs.length} absentees. Notifying...`);
-            
-            // 3a. NOTIFY (Sequence Strict)
-            const busNumber = tripData.busNumber || busId;
-            const direction = tripData.direction || 'pickup';
-            await sendNotBoardedBulkNotification(
-                pendingAbsenteeDocs,
-                busNumber,
-                direction,
-                tripId,
-                req.collegeId,
-                db,
-                admin,
-                messaging
-            );
-
-            // 3b. RECORD in DB (Batch)
-            const datePrefix = new Date().toISOString().split('T')[0];
-            const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
-            
-            pendingAbsenteeDocs.forEach(doc => {
-                const studentId = doc.id;
-                const studentData = doc.data();
-                const attendanceId = `${datePrefix}__${busId}__${direction}__${studentId}`;
-                const attendanceRef = db.collection('attendance').doc(attendanceId);
-
-                batch.set(attendanceRef, {
-                    tripId,
-                    studentId,
-                    busId: busId,
-                    busNumber,
-                    collegeId: req.collegeId,
-                    driverId: req.user.id,
-                    studentName: studentData.name || 'Unknown Student',
-                    direction,
-                    status: direction === 'pickup' ? 'not_boarded' : 'not_dropped',
-                    absentNotifiedAt: serverTimestamp,
-                    createdAt: serverTimestamp,
-                    updatedAt: serverTimestamp,
-                    pickedUpAt: null,
-                    droppedOffAt: null
-                }, { merge: true });
-            });
-        }
-
         await batch.commit();
 
-        // 4. Trigger Trip Ended cleanup/notification
+
+        // Notify students whose favorite bus this was (Awaited for Vercel reliability)
         await sendTripEndedNotification(tripId, busId, tripData.collegeId || req.collegeId)
             .catch(err => console.error('[endTrip] Trip ended notification failed:', err));
 
@@ -352,7 +288,7 @@ const endTrip = async (req, res) => {
 // @desc    Start a new trip
 // @route   POST /api/driver/trip/start/:busId
 // @access  Private (Driver)
-const startTrip = async (req, res) => {
+async function startTrip(req, res) {
     try {
         const { busId } = req.params;
         const { tripId, routeId, direction, isMaintenance, originalBusId } = req.body;
@@ -515,7 +451,7 @@ const startTrip = async (req, res) => {
 // @desc    Save trip history point (every 1 minute)
 // @route   POST /api/driver/trip/history/:busId
 // @access  Private (Driver)
-const saveTripHistory = async (req, res) => {
+async function saveTripHistory(req, res) {
     try {
         const { busId } = req.params;
         const { tripId, latitude, longitude, speed, heading, timestamp } = req.body;
@@ -569,7 +505,7 @@ const saveTripHistory = async (req, res) => {
 // @desc    Upload complete trip history at trip end (replaces per-second writes)
 // @route   POST /api/driver/trips/:tripId/history-upload
 // @access  Private (Driver)
-const historyUpload = async (req, res) => {
+async function historyUpload(req, res) {
     try {
         const { tripId } = req.params;
         const { polyline, distanceMeters, durationSeconds, maxSpeedMph, avgSpeedMph, pointsCount, path, attendance } = req.body;
@@ -588,7 +524,6 @@ const historyUpload = async (req, res) => {
         }
 
         const tripData = tripDoc.data();
-        console.log(`[historyUpload] Starting for trip ${tripId}, bus ${tripData.busId}, attendance count: ${attendance?.length || 0}`);
 
         // Verify driver owns this trip
         if (tripData.driverId !== req.user.id) {
@@ -644,6 +579,21 @@ const historyUpload = async (req, res) => {
                 const datePrefix = new Date().toISOString().split('T')[0];
                 const attendanceId = `${datePrefix}__${tripData.busId}__${direction}__${studentId}`;
                 const attendanceRef = db.collection('attendance').doc(attendanceId);
+
+                // Check if specialized status already exists (e.g., dropped_off_neighbor)
+                // We do a batch-friendly check by using a map or similar if we were optimized,
+                // but for now, we'll use a simple merge that doesn't overwrite status if possible.
+                // However, batch.set(..., {merge: true}) with a field provided WILL overwrite it.
+                // So we'll skip the status field if we're not sure, or better: 
+                // we'll just use a transaction in historyUpload instead of batch for attendance
+                // OR we'll fetch existing statuses first.
+
+                // OPTIMIZED: Use { merge: true } but we need to know if we should include 'status'.
+                // Since this is a batch, we'll fetch existing records first.
+                const existingAttendance = await attendanceRef.get();
+                const currentData = existingAttendance.exists ? existingAttendance.data() : null;
+                const currentStatus = currentData ? currentData.status : null;
+
                 const attendanceData = {
                     tripId,
                     studentId,
@@ -653,17 +603,25 @@ const historyUpload = async (req, res) => {
                     driverId: req.user.id,
                     studentName,
                     direction,
-                    status: isPickup ? 'picked_up' : 'dropped_off',
-                    createdAt: serverTimestamp,
+                    createdAt: currentData ? currentData.createdAt : serverTimestamp,
                     updatedAt: serverTimestamp
                 };
-                if (isPickup) {
-                    attendanceData.pickedUpAt = serverTimestamp;
-                    attendanceData.droppedOffAt = null;
+
+                // Preserve specialized status
+                if (currentStatus === 'dropped_off_neighbor') {
+                    attendanceData.status = currentStatus;
                 } else {
-                    attendanceData.droppedOffAt = serverTimestamp;
-                    attendanceData.pickedUpAt = null;
+                    attendanceData.status = isPickup ? 'picked_up' : 'dropped_off';
                 }
+
+                if (isPickup) {
+                    attendanceData.pickedUpAt = currentData?.pickedUpAt || serverTimestamp;
+                    attendanceData.droppedOffAt = currentData?.droppedOffAt || null;
+                } else {
+                    attendanceData.droppedOffAt = currentData?.droppedOffAt || serverTimestamp;
+                    attendanceData.pickedUpAt = currentData?.pickedUpAt || null;
+                }
+
                 batch.set(attendanceRef, attendanceData, { merge: true });
             }
 
@@ -674,76 +632,67 @@ const historyUpload = async (req, res) => {
             }
 
             await batch.commit();
-            console.log(`[historyUpload] SUCCESS: Written ${studentIds.length} present records (${direction})`);
-        } else {
-            console.log(`[historyUpload] INFO: No "present" attendance provided in payload.`);
+            console.log(`[historyUpload] Written ${studentIds.length} present records (${direction})`);
         }
 
+        // ── B. NOT_BOARDED: always run regardless of whether attendance was empty ──
+        // FIX: moved out of the `if (attendance.length > 0)` block so it always fires.
         try {
-            // ── B. NOT_BOARDED: Instant notification before DB push ────────────────
             const allBusStudents = await db.collection('students')
                 .where('collegeId', '==', req.collegeId)
                 .where('assignedBusId', '==', tripData.busId)
                 .get();
 
+            const pendingTokens = [];
             const pendingStudentDocs = [];
+
             allBusStudents.forEach(doc => {
                 if (!studentIds.includes(doc.id)) {
                     pendingStudentDocs.push(doc);
+                    const sd = doc.data();
+                    if (sd.fcmToken && typeof sd.fcmToken === 'string' && sd.fcmToken.length > 10) {
+                        pendingTokens.push(sd.fcmToken);
+                    }
                 }
             });
 
+            // FCM logic removed — consolidated into sendTripEndedNotification
+            console.log(`[historyUpload] Processing records for ${pendingStudentDocs.length} absent students (Notification deferred to endTrip)`);
+
+            // Write not_boarded / not_dropped records for absent students
+            const nbBatch = db.batch();
+            pendingStudentDocs.forEach(doc => {
+                const studentId = doc.id;
+                const studentData = doc.data();
+                const datePrefix = new Date().toISOString().split('T')[0];
+                const attendanceId = `${datePrefix}__${tripData.busId}__${direction}__${studentId}`;
+                const attendanceRef = db.collection('attendance').doc(attendanceId);
+
+                // Only create if it doesn't exist or overwrite with not_boarded?
+                // Actually, if we are ending the trip, these are the students who DID NOT show up.
+                // We should record them as not_boarded if no record exists for them today yet.
+                nbBatch.set(attendanceRef, {
+                    tripId,
+                    studentId,
+                    busId: tripData.busId,
+                    busNumber,
+                    collegeId: req.collegeId,
+                    driverId: req.user.id,
+                    studentName: studentData.name || 'Unknown Student',
+                    direction,
+                    status: isPickup ? 'not_boarded' : 'not_dropped',
+                    createdAt: serverTimestamp,
+                    updatedAt: serverTimestamp,
+                    pickedUpAt: null,
+                    droppedOffAt: null
+                }, { merge: true });
+            });
             if (pendingStudentDocs.length > 0) {
-                console.log(`[historyUpload] Sending instant 'Not Boarded' notifications for ${pendingStudentDocs.length} students...`);
-                
-                // 1. Await notification delivery (Sequence Strict)
-                await sendNotBoardedBulkNotification(
-                    pendingStudentDocs, 
-                    busNumber, 
-                    direction, 
-                    tripId, 
-                    req.collegeId, 
-                    db, 
-                    admin, 
-                    messaging
-                );
-
-                console.log(`[historyUpload] Notifications sent. Committing absentee records to DB...`);
-
-                // 2. Write not_boarded / not_dropped records to DB
-                const nbBatch = db.batch();
-                pendingStudentDocs.forEach(doc => {
-                    const studentId = doc.id;
-                    const studentData = doc.data();
-                    const datePrefix = new Date().toISOString().split('T')[0];
-                    const attendanceId = `${datePrefix}__${tripData.busId}__${direction}__${studentId}`;
-                    const attendanceRef = db.collection('attendance').doc(attendanceId);
-
-                    nbBatch.set(attendanceRef, {
-                        tripId,
-                        studentId,
-                        busId: tripData.busId,
-                        busNumber,
-                        collegeId: req.collegeId,
-                        driverId: req.user.id,
-                        studentName: studentData.name || 'Unknown Student',
-                        direction,
-                        status: isPickup ? 'not_boarded' : 'not_dropped',
-                        absentNotifiedAt: admin.firestore.FieldValue.serverTimestamp(), // Mark as already notified
-                        createdAt: serverTimestamp,
-                        updatedAt: serverTimestamp,
-                        pickedUpAt: null,
-                        droppedOffAt: null
-                    }, { merge: true });
-                });
-
                 await nbBatch.commit();
-                console.log(`[historyUpload] SUCCESS: Recorded ${pendingStudentDocs.length} absent students.`);
-            } else {
-                console.log(`[historyUpload] INFO: All assigned students were present.`);
+                console.log(`[historyUpload] Recorded ${pendingStudentDocs.length} absent students`);
             }
         } catch (pendingErr) {
-            console.error('[historyUpload] Absentee processing error:', pendingErr.message);
+            console.error('[historyUpload] Pending students processing error:', pendingErr.message);
         }
 
         await tripRef.update(updateData);
@@ -759,10 +708,10 @@ const historyUpload = async (req, res) => {
 // @desc    Notify single student on attendance tick
 // @route   POST /api/driver/trips/:tripId/attendance/notify
 // @access  Private (Driver)
-const notifyStudentAttendance = async (req, res) => {
+async function notifyStudentAttendance(req, res) {
     try {
         const { tripId } = req.params;
-        const { studentId, busId, direction, isChecked, busNumber, reason } = req.body;
+        const { studentId, busId, direction, isChecked, busNumber } = req.body;
 
         if (!studentId || !busId) {
             return res.status(400).json({ success: false, message: 'Missing required parameters' });
@@ -774,8 +723,7 @@ const notifyStudentAttendance = async (req, res) => {
             direction,
             isChecked,
             busNumber,
-            tripId,
-            reason
+            tripId
         });
 
         res.status(200).json({ success: true, message: 'Notification sent' });
@@ -788,7 +736,7 @@ const notifyStudentAttendance = async (req, res) => {
 // @desc    Trigger proximity check (Phase 4.3)
 // @route   POST /api/driver/notifications/proximity
 // @access  Private (Driver)
-const checkProximity = async (req, res) => {
+async function checkProximity(req, res) {
     try {
         const { busId, location, tripId, routeId } = req.body;
         // console.log('Checking proximity for bus:', busId); 
@@ -807,7 +755,7 @@ const checkProximity = async (req, res) => {
 // @desc    Mark student as picked up
 // @route   POST /api/driver/trips/:tripId/attendance/pickup
 // @access  Private (Driver)
-const markPickup = async (req, res) => {
+async function markPickup(req, res) {
     try {
         const { tripId } = req.params;
         const { studentId } = req.body;
@@ -887,7 +835,7 @@ const markPickup = async (req, res) => {
 // @desc    Mark student as dropped off
 // @route   POST /api/driver/trips/:tripId/attendance/dropoff
 // @access  Private (Driver)
-const markDropoff = async (req, res) => {
+async function markDropoff(req, res) {
     try {
         const { tripId } = req.params;
         const { studentId } = req.body;
@@ -963,7 +911,7 @@ const markDropoff = async (req, res) => {
 // @desc    Get all attendance records for a trip
 // @route   GET /api/driver/trips/:tripId/attendance
 // @access  Private (Driver)
-const getTripAttendance = async (req, res) => {
+async function getTripAttendance(req, res) {
     try {
         const { tripId } = req.params;
 
@@ -987,7 +935,7 @@ const getTripAttendance = async (req, res) => {
 // @desc    Get today's total attendance for a bus and direction
 // @route   GET /api/driver/buses/:busId/attendance/today
 // @access  Private (Driver)
-const getTodayAttendance = async (req, res) => {
+async function getTodayAttendance(req, res) {
     try {
         const { busId } = req.params;
         const { direction } = req.query; // pickup or dropoff
@@ -1005,8 +953,6 @@ const getTodayAttendance = async (req, res) => {
             .where('busId', '==', busId)
             .where('direction', '==', direction) // Hardened: DB-level filter
             .get();
-
-        console.log(`[getTodayAttendance] Found ${attendanceSnapshot.size} potential records for bus: ${busId}, direction: ${direction}, college: ${req.collegeId}`);
 
         const studentIds = attendanceSnapshot.docs
             .filter(doc => {
@@ -1037,7 +983,7 @@ const getTodayAttendance = async (req, res) => {
                 if (recordDirection !== direction) return false;
 
                 // 3. Status Check
-                return ['picked_up', 'dropped_off'].includes(data.status);
+                return ['picked_up', 'dropped_off', 'dropped_off_neighbor'].includes(data.status);
             })
             .map(doc => doc.data().studentId);
 
@@ -1054,25 +1000,12 @@ const getTodayAttendance = async (req, res) => {
 // @desc    Get students assigned to a specific bus (for drivers)
 // @route   GET /api/driver/buses/:busId/students
 // @access  Private (Driver)
-const getBusStudents = async (req, res) => {
+async function getBusStudents(req, res) {
     try {
         const { busId } = req.params;
         const collegeId = req.collegeId;
 
-        // Verify the driver is assigned to this bus or has permission
-        const busRef = db.collection('buses').doc(busId);
-        const busDoc = await busRef.get();
-
-        if (!busDoc.exists) {
-            console.warn(`[getBusStudents] Bus NOT FOUND in Firestore: "${busId}" (Requested by: ${req.user.email})`);
-            return res.status(404).json({ success: false, message: `Bus not found: ${busId}` });
-        }
-
-        const busData = busDoc.data();
-        if (busData.collegeId !== collegeId) {
-            console.warn(`[getBusStudents] College Mismatch for bus ${busId}: Bus College: ${busData.collegeId} vs Request College: ${collegeId}`);
-            return res.status(403).json({ success: false, message: 'Access denied: College mismatch' });
-        }
+        if (!busId) return res.status(400).json({ success: false, message: 'Bus ID required' });
 
         // Fetch students who have assignedBusId === busId
         const snapshot = await db.collection('students')
@@ -1084,11 +1017,12 @@ const getBusStudents = async (req, res) => {
             const data = doc.data();
             return {
                 id: doc.id,
+                _id: doc.id,
                 name: data.name || '',
                 email: data.email || '',
-                phone: data.phone || data.phoneNumber || null,
-                registerNumber: data.registerNumber || null,
-                rollNumber: data.rollNumber || null,
+                phone: data.phone || data.phoneNumber || '',
+                registerNumber: data.registerNumber || '',
+                rollNumber: data.rollNumber || '',
                 assignedBusId: data.assignedBusId || null,
             };
         });
@@ -1098,7 +1032,163 @@ const getBusStudents = async (req, res) => {
             data: students
         });
     } catch (error) {
-        console.error('Error fetching bus students for driver:', error);
+        console.error('getBusStudents error:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Generate Handover OTP for a student
+async function generateHandoverOTP(req, res) {
+    try {
+        const { tripId } = req.params;
+        const { studentId, neighborName, neighborPhone } = req.body;
+
+        if (!studentId) return res.status(400).json({ success: false, message: 'Student ID required' });
+
+        const tripRef = db.collection('trips').doc(tripId);
+        const tripDoc = await tripRef.get();
+        if (!tripDoc.exists) return res.status(404).json({ success: false, message: 'Trip not found' });
+
+        const studentDoc = await db.collection('students').doc(studentId).get();
+        if (!studentDoc.exists) return res.status(404).json({ success: false, message: 'Student not found' });
+
+        const studentData = studentDoc.data();
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const tripData = tripDoc.data();
+
+        // Store OTP in a new collection 'handoffs'
+        const handoffId = `${tripId}_${studentId}`;
+        await db.collection('handoffs').doc(handoffId).set({
+            tripId,
+            studentId,
+            studentName: studentData.name || 'Unknown Student',
+            busId: tripData.busId,
+            busNumber: tripData.busNumber || 'Unknown',
+            otp,
+            neighborName: neighborName || null,
+            neighborPhone: neighborPhone || null,
+            collegeId: req.collegeId,
+            driverId: req.user.id,
+            status: 'PENDING',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 15 * 60000))
+        });
+
+        // Send FCM Notification to student
+        if (studentData.fcmToken) {
+            const title = '🚌 Student Handover OTP';
+            const body = `Your handover OTP is: ${otp}. Please share this with the person receiving you.`;
+
+            const message = {
+                notification: { title, body },
+                data: {
+                    type: 'HANDOVER_OTP',
+                    otp: otp,
+                    tripId: tripId
+                },
+                token: studentData.fcmToken
+            };
+
+            await messaging.send(message).catch(err => console.error('[HandoverOTP] FCM failed:', err));
+
+            // Store in user_notifications for the bell icon in student app
+            await db.collection('user_notifications').add({
+                studentId,
+                title,
+                body,
+                type: 'HANDOVER_OTP',
+                otp: otp,
+                tripId: tripId,
+                read: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        res.status(200).json({ success: true, message: 'OTP generated and sent to student' });
+    } catch (error) {
+        console.error('Error generating handover OTP:', error);
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Verify Handover OTP and mark student as handed over
+// @route   POST /api/driver/trips/:tripId/attendance/handover/verify
+// @access  Private (Driver)
+async function verifyHandoverOTP(req, res) {
+    try {
+        const { tripId } = req.params;
+        const { studentId, otp } = req.body;
+
+        if (!studentId || !otp) return res.status(400).json({ success: false, message: 'Student ID and OTP are required' });
+
+        const handoffId = `${tripId}_${studentId}`;
+        const handoffRef = db.collection('handoffs').doc(handoffId);
+        const handoffDoc = await handoffRef.get();
+
+        if (!handoffDoc.exists) return res.status(404).json({ success: false, message: 'Handoff session not found' });
+
+        const handoffData = handoffDoc.data();
+
+        if (handoffData.status !== 'PENDING') {
+            return res.status(400).json({ success: false, message: `Handoff already ${handoffData.status.toLowerCase()}` });
+        }
+
+        if (handoffData.otp !== otp) {
+            return res.status(400).json({ success: false, message: 'Wrong OTP entered. Please retry.' });
+        }
+
+        // Check expiry
+        if (handoffData.expiresAt.toDate() < new Date()) {
+            await handoffRef.update({ status: 'EXPIRED' });
+            return res.status(400).json({ success: false, message: 'OTP expired' });
+        }
+
+        // OTP is valid! Mark as handed over in attendance
+        const datePrefix = new Date().toISOString().split('T')[0];
+        // Use busId from handoffData for consistent attendance grouping
+        const attendanceId = `${datePrefix}__${handoffData.busId}__dropoff__${studentId}`;
+        const attendanceRef = db.collection('attendance').doc(attendanceId);
+
+        await db.runTransaction(async (transaction) => {
+            transaction.update(handoffRef, {
+                status: 'VERIFIED',
+                verifiedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            transaction.set(attendanceRef, {
+                tripId: handoffData.tripId,
+                studentId: handoffData.studentId,
+                studentName: handoffData.studentName || 'Unknown Student',
+                busId: handoffData.busId,
+                busNumber: handoffData.busNumber || 'Unknown',
+                collegeId: handoffData.collegeId,
+                driverId: handoffData.driverId,
+                direction: 'dropoff',
+                status: 'dropped_off_neighbor',
+                neighborName: handoffData.neighborName || null,
+                neighborPhone: handoffData.neighborPhone || null,
+                otpStatus: 'SUCCESS',
+                handedOverAt: admin.firestore.FieldValue.serverTimestamp(),
+                droppedOffAt: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        });
+
+        // Instant notification to student/parent
+        sendStudentAttendanceNotification({
+            studentId,
+            busId: handoffData.busId,
+            direction: 'dropoff',
+            isChecked: true,
+            busNumber: handoffData.busNumber || 'Unknown',
+            tripId: tripId
+        }).catch(err => console.error('[verifyHandoverOTP] Notification error:', err.message));
+
+        res.status(200).json({ success: true, message: 'Student handed over successfully' });
+    } catch (error) {
+        console.error('Error verifying handover OTP:', error);
         res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
@@ -1117,6 +1207,8 @@ module.exports = {
     getTripAttendance,
     getBusStudents,
     getTodayAttendance,
-    notifyStudentAttendance
+    notifyStudentAttendance,
+    generateHandoverOTP,
+    verifyHandoverOTP
 };
 

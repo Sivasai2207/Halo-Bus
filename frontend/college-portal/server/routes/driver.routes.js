@@ -14,7 +14,9 @@ const {
     getTripAttendance,
     getBusStudents,
     getTodayAttendance,
-    notifyStudentAttendance
+    notifyStudentAttendance,
+    generateHandoverOTP,
+    verifyHandoverOTP
 } = require('../controllers/driverController');
 const { sendStopEventNotification, sendTripEndedNotification } = require('../controllers/notificationController');
 const { protect, authorize } = require('../middleware/auth');
@@ -45,6 +47,10 @@ router.get('/trips/:tripId/attendance', getTripAttendance);
 router.get('/buses/:busId/attendance/today', getTodayAttendance);
 router.post('/trips/:tripId/attendance/notify', notifyStudentAttendance);
 router.get('/buses/:busId/students', getBusStudents);
+
+// Handover OTP
+router.post('/trips/:tripId/attendance/handover/generate', generateHandoverOTP);
+router.post('/trips/:tripId/attendance/handover/verify', verifyHandoverOTP);
 
 // POST /api/driver/trip-started-notify
 router.post('/trip-started-notify', async (req, res) => {
@@ -81,13 +87,9 @@ router.post('/stop-event', async (req, res) => {
         if (!tripId || !busId || !collegeId || !stopId || !type) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
-        // Add COMPLETED to the allowed list (Step 7 Fix)
-        if (!['ARRIVING', 'ARRIVED', 'SKIPPED', 'COMPLETED'].includes(type)) {
-            console.error(`[StopEvent Route] REJECTED: Invalid type "${type}" from bus ${busId}`);
+        if (!['ARRIVING', 'ARRIVED', 'SKIPPED'].includes(type)) {
             return res.status(400).json({ success: false, message: 'Invalid type' });
         }
-
-        console.log(`[StopEvent Route] SUCCESS: Processing ${type} for trip ${tripId}, bus ${busId}, stop ${stopId}`);
 
         // Await the promise — do not respond until FCM processes to avoid container suspension
         await sendStopEventNotification(tripId, busId, collegeId, stopId, stopName || '', stopAddress || '', type, arrivalDocId || null, targetStudentIds || null)

@@ -298,21 +298,20 @@ const createBulkUsers = async (req, res) => {
             }
 
             try {
-                const normalizedEmail = (user.email || '').toLowerCase().trim();
                 // Check if email exists in students collection
-                const studentSnapshot = await db.collection('students').where('email', '==', normalizedEmail).limit(1).get();
+                const studentSnapshot = await db.collection('students').where('email', '==', user.email).limit(1).get();
                 if (!studentSnapshot.empty) {
                     results.errors.push({ user, error: 'This email is already registered as a STUDENT.' });
                     continue;
                 }
                 // 1. Create in Firebase Auth first (for login compatibility)
                 const authUser = await admin.auth().createUser({
-                    email: normalizedEmail,
+                    email: user.email,
                     password: user.phone.toString(),
                     displayName: user.name
                 }).catch(async (err) => {
                     if (err.code === 'auth/email-already-exists') {
-                        return await admin.auth().getUserByEmail(normalizedEmail);
+                        return await admin.auth().getUserByEmail(user.email);
                     }
                     throw err;
                 });
@@ -325,7 +324,7 @@ const createBulkUsers = async (req, res) => {
                     userId,
                     collegeId: req.collegeId,
                     name: user.name,
-                    email: normalizedEmail,
+                    email: user.email,
                     phone: user.phone,
                     passwordHash,
                     role,
@@ -360,8 +359,7 @@ const createBulkUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-    const { name, password, phone, role } = req.body;
-    const email = (req.body.email || '').toLowerCase().trim();
+    const { name, email, password, phone, role } = req.body;
 
     if (!['DRIVER', 'STUDENT'].includes(role)) {
         return res.status(400).json({ message: 'Invalid role for college admin creation' });
@@ -1436,8 +1434,6 @@ const getAttendance = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Organization ID is required' });
         }
 
-        console.log(`[getAttendance] Request for college: ${collegeId}, busId: ${busId}, date: ${date}, direction: ${direction}, tz: ${req.query.timezone}`);
-
         let query = db.collection('attendance')
             .where('collegeId', '==', collegeId);
 
@@ -1453,10 +1449,8 @@ const getAttendance = async (req, res) => {
             query = query.where('direction', '==', direction);
         }
 
-        // Fetch snapshot
+        // Fetch snapshot (in-memory filtering avoids complex composite indexes)
         const snapshot = await query.get();
-        console.log(`[getAttendance] Found ${snapshot.size} total docs for college ${collegeId} before date filter.`);
-
         let attendanceObjects = snapshot.docs.map(doc => {
             const data = doc.data();
             return {

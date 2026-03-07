@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { db, admin, auth } = require('../config/firebase');
+const { db, admin, auth, initializationError } = require('../config/firebase');
 
 // Helper to validate password since Mongoose method is gone
 const matchPassword = async (enteredPassword, passwordHash) => {
@@ -20,8 +20,7 @@ const generateToken = (id, role, collegeId) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = async (req, res) => {
-    const { password, orgSlug } = req.body;
-    const email = (req.body.email || '').toLowerCase().trim();
+    const { email, password, orgSlug } = req.body;
 
     try {
         // -------------------------
@@ -108,12 +107,10 @@ const loginUser = async (req, res) => {
         if (!studentSnapshot.empty) {
             const studentDoc = studentSnapshot.docs[0];
             const student = studentDoc.data();
-            console.log(`[Login] Found student: ${student.email} (ID: ${student.studentId})`);
 
             // Check College Status for student
             const collegeDoc = await db.collection('colleges').doc(student.collegeId).get();
             if (collegeDoc.exists && collegeDoc.data().status === 'SUSPENDED') {
-                console.warn(`[Login] Blocking student ${student.email}: College ${student.collegeId} is SUSPENDED`);
                 return res.status(403).json({ message: 'Your organization account is suspended.' });
             }
 
@@ -122,24 +119,18 @@ const loginUser = async (req, res) => {
 
             if (isFirstLogin || !student.passwordHash) {
                 // First login: password should match registerNumber (harden with String/trim)
-                console.log(`[Login] Student first login check for ${student.email}. RegisterNumber: ${student.registerNumber}`);
                 if (String(password).trim() === String(student.registerNumber || '').trim()) {
                     isValid = true;
-                } else {
-                    console.warn(`[Login] First login password mismatch for ${student.email}. Entered: ${password}, Expected: ${student.registerNumber}`);
                 }
             } else {
                 // Subsequent login
                 if (await matchPassword(password, student.passwordHash)) {
                     isValid = true;
                     isFirstLogin = false; // Confirm it's not first login flow effectively
-                } else {
-                    console.warn(`[Login] Subsequent login password mismatch for ${student.email}`);
                 }
             }
 
             if (isValid) {
-                console.log(`[Login] Student ${student.email} verified successfully.`);
                 const firebaseCustomToken = await auth.createCustomToken(student.studentId, {
                     role: 'STUDENT',
                     collegeId: student.collegeId
@@ -163,7 +154,6 @@ const loginUser = async (req, res) => {
             }
         }
 
-        console.warn(`[Login] User not found or invalid password for: ${email}`);
         return res.status(401).json({ message: 'Invalid email or password' });
 
     } catch (error) {
@@ -176,8 +166,7 @@ const loginUser = async (req, res) => {
 // @route   POST /api/auth/register-owner
 // @access  Public (Should ideally be protected by a secret)
 const registerOwner = async (req, res) => {
-    const { name, password } = req.body;
-    const email = (req.body.email || '').toLowerCase().trim();
+    const { name, email, password } = req.body;
 
     try {
         const usersRef = db.collection('users');
@@ -342,7 +331,7 @@ const getCollegeBySlug = async (req, res) => {
 // @route   GET /api/auth/health/firebase
 // @access  Public
 const getFirebaseHealth = async (req, res) => {
-    const { initializationError, db, admin } = require('../config/firebase');
+    const { initializationError, db } = require('../config/firebase');
     if (initializationError) {
         return res.status(500).json({
             ok: false,
@@ -358,31 +347,24 @@ const getFirebaseHealth = async (req, res) => {
         });
     }
 
-    // Get current project ID and masked client email
-    const app = admin.app();
-    const projectId = app.options.credential.projectId || 'Unknown';
-    const clientEmail = app.options.credential.clientEmail || 'Unknown';
-    const maskedEmail = clientEmail !== 'Unknown' 
-        ? clientEmail.substring(0, 5) + '...' + clientEmail.substring(clientEmail.indexOf('@'))
-        : 'Unknown';
-
     return res.json({
         ok: true,
-        message: 'Firebase Admin initialized and DB available',
-        diagnostics: {
-            projectId: projectId,
-            clientEmail: maskedEmail,
-            databaseId: '(default)'
-        }
+        message: 'Firebase Admin initialized and DB available'
     });
 };
+
+// In-memory cache for colleges list to reduce Firestore reads
+let cachedColleges = {
+    data: null,
+    lastUpdate: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // @desc    Search colleges by name
 // @route   GET /api/auth/colleges/search?q=query
 // @access  Public
 const searchColleges = async (req, res) => {
     try {
-        const { initializationError, db } = require('../config/firebase');
         const query = (req.query.q || '').trim();
 
         if (!query) {
@@ -400,11 +382,17 @@ const searchColleges = async (req, res) => {
 
         const collegesRef = db.collection('colleges');
 
-        // Fetch ACTIVE colleges and filter in-memory for case-insensitive robust matching
-        const snapshot = await collegesRef.where('status', '==', 'ACTIVE').get();
+        // Efficiency optimization: Use in-memory cache if valid
+        let collegesSource;
+        const now = Date.now();
 
-        const colleges = snapshot.docs
-            .map(doc => {
+        if (cachedColleges.data && (now - cachedColleges.lastUpdate < CACHE_TTL)) {
+            collegesSource = cachedColleges.data;
+        } else {
+            console.log("[Search] Cache expired or empty, fetching from Firestore...");
+            // Fetch ACTIVE colleges
+            const snapshot = await collegesRef.where('status', '==', 'ACTIVE').get();
+            collegesSource = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
                     collegeId: data.collegeId,
@@ -412,7 +400,13 @@ const searchColleges = async (req, res) => {
                     slug: data.slug,
                     status: data.status
                 };
-            })
+            });
+            // Update cache
+            cachedColleges.data = collegesSource;
+            cachedColleges.lastUpdate = now;
+        }
+
+        const filteredColleges = collegesSource
             .filter(c => {
                 const name = (c.collegeName || '').toLowerCase();
                 const slug = (c.slug || '').toLowerCase();
@@ -422,7 +416,7 @@ const searchColleges = async (req, res) => {
             .slice(0, 15);
 
         // Standardized response shape: { colleges: [...] }
-        return res.json({ colleges });
+        return res.json({ colleges: filteredColleges });
     } catch (error) {
         console.error("[searchColleges error]", error);
         return res.status(500).json({
@@ -436,8 +430,7 @@ const searchColleges = async (req, res) => {
 // @route   POST /api/auth/student/login
 // @access  Public
 const studentLogin = async (req, res) => {
-    const { password, orgSlug } = req.body;
-    const email = (req.body.email || '').toLowerCase().trim();
+    const { email, password, orgSlug } = req.body;
 
     try {
         // 1. Find college by slug

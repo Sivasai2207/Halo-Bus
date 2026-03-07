@@ -3,15 +3,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getMessaging } from 'firebase/messaging';
 
-// Web app's Firebase configuration for halo-bus
 const firebaseConfig = {
-    apiKey: "AIzaSyD3qT21T11QPD5O_49pBNnQ0WFE3u0AJzQ",
-    authDomain: "halo-bus.firebaseapp.com",
-    projectId: "halo-bus",
-    storageBucket: "halo-bus.firebasestorage.app",
-    messagingSenderId: "86666729917",
-    appId: "1:86666729917:web:de70b266a051f0c2921ad4",
-    measurementId: "G-EVFDPZ4E4D"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

@@ -22,7 +22,7 @@ exports.reverseGeocode = async (req, res) => {
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${longitude}&format=json&zoom=16`,
             {
                 headers: {
-                    'User-Agent': 'Halo BusBusApp/1.0 (Halo Bus IT Department)'
+                    'User-Agent': 'BannuBusApp/1.0 (Bannu IT Department)'
                 },
                 timeout: 5000 // 5 second timeout
             }
