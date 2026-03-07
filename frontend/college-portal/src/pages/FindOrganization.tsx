@@ -92,7 +92,12 @@ const FindOrganization = () => {
                             <input
                                 type="text"
                                 value={query}
-                                onChange={(e) => setQuery(e.target.value)}
+                                onChange={(e) => {
+                                    setQuery(e.target.value);
+                                    if (selectedOrg && e.target.value !== selectedOrg.collegeName) {
+                                        setSelectedOrg(null);
+                                    }
+                                }}
                                 placeholder="Type your organization name..."
                                 className="w-full pl-12 pr-12 py-4 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all text-lg font-medium shadow-sm"
                                 autoFocus
@@ -144,7 +149,7 @@ const FindOrganization = () => {
                         )}
 
                         {/* No Results */}
-                        {query.length >= 1 && !loading && results.length === 0 && !error && (
+                        {query.length >= 1 && !loading && results.length === 0 && !error && !selectedOrg && (
                             <div className="mt-4 text-center text-slate-500 py-8 font-medium">
                                 <Building2 size={48} className="mx-auto mb-3 opacity-20" />
                                 <p>No organizations found matching "{query}"</p>
