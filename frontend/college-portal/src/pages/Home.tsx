@@ -18,7 +18,7 @@ const Home = () => {
                         <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm">
                             <Bus size={28} className="text-blue-600" />
                         </div>
-                        <span className="text-slate-800 drop-shadow-sm">Prasai<span className="text-blue-600">Track</span></span>
+                        <span className="text-slate-800 drop-shadow-sm">Halo <span className="text-blue-600">Bus</span></span>
                     </motion.div>
 
                     <motion.button

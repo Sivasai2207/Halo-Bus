@@ -44,7 +44,7 @@ const Layout = ({ children, activeItem = 'dashboard' }: LayoutProps) => {
                         <div className="bg-[#1F2937] p-2 rounded-xl shadow-md">
                             <Bus size={22} className="text-white" />
                         </div>
-                        <span className="text-slate-800">Prasai<span className="text-emerald-500">Track</span></span>
+                        <span className="text-slate-800">Halo<span className="text-emerald-500"> Bus</span></span>
                     </motion.div>
                     <button
                         onClick={() => setSidebarOpen(false)}

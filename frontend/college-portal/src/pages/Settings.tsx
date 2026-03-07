@@ -125,7 +125,7 @@ const Settings = () => {
                                 </div>
                                 <div className="flex justify-between py-2">
                                     <span>Support</span>
-                                    <span className="text-emerald-600">support@prasai.com</span>
+                                    <span className="text-emerald-600">support@halobus.com</span>
                                 </div>
                             </div>
                         </div>

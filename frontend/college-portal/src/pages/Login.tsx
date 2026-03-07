@@ -225,7 +225,7 @@ const Login = () => {
                         className="flex items-center justify-center space-x-2 text-sm text-slate-600 bg-white py-2 px-4 rounded-full border border-slate-100 shadow-sm"
                     >
                         <ShieldCheck size={16} className="text-green-500" />
-                        <span className="font-semibold">Powered by Prasai Secure Transport</span>
+                        <span className="font-semibold">Powered by Halo Bus Secure Transport</span>
                     </motion.div>
                 </div>
             </motion.div>
