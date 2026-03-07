@@ -60,7 +60,7 @@ class _StudentBusesScreenState extends ConsumerState<StudentBusesScreen> {
                 "Driver Name", 
                 bus.driverName ?? "Unassigned",
                 leading: bus.driverPhotoUrl != null 
-                  ? ProfileAvatar(photoUrl: bus.driverPhotoUrl, name: bus.driverName, radius: 24)
+                  ? ProfileAvatar(photoUrl: bus.driverPhotoUrl, name: bus.driverName, radius: 34)
                   : null,
               ),
               const SizedBox(height: 16),
@@ -418,7 +418,7 @@ class StudentBusCard extends StatelessWidget {
                 ProfileAvatar(
                   photoUrl: bus.driverPhotoUrl,
                   name: bus.driverName,
-                  radius: 14,
+                  radius: 20,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

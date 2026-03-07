@@ -118,7 +118,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                             : ProfileAvatar(
                                 photoUrl: profile.photoUrl,
                                 name: profile.name,
-                                radius: 32,
+                                radius: 48,
                                 onTap: _showPicker,
                               ),
                         const SizedBox(width: 16),

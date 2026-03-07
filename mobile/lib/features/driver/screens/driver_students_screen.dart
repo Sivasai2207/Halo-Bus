@@ -541,7 +541,7 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                   ProfileAvatar(
                     photoUrl: student.photoUrl,
                     name: student.name,
-                    radius: 30,
+                    radius: 42,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -917,7 +917,7 @@ class StudentItem extends StatelessWidget {
         leading: ProfileAvatar(
           photoUrl: student.photoUrl,
           name: student.name,
-          radius: 20,
+          radius: 30,
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

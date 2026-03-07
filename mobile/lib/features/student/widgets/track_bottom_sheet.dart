@@ -106,7 +106,7 @@ class TrackBottomSheet extends StatelessWidget {
                   ProfileAvatar(
                     photoUrl: driverPhotoUrl,
                     name: driverName,
-                    radius: 24,
+                    radius: 34,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

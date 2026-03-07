@@ -111,7 +111,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                           : ProfileAvatar(
                               photoUrl: profile?.photoUrl,
                               name: profile?.name,
-                              radius: 34,
+                              radius: 48,
                               onTap: _showPicker,
                             ),
                       const SizedBox(width: 16),
