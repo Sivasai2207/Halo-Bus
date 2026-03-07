@@ -124,7 +124,7 @@ const Home = () => {
 
             {/* Footer */}
             <footer className="absolute bottom-0 left-0 right-0 p-6 text-center text-slate-400 font-medium text-sm backdrop-blur-sm">
-                <p>© 2026 PrasaiTrack. Making campus commutes smarter.</p>
+                <p>© 2026 Halo Bus. Making campus commutes smarter.</p>
             </footer>
         </div>
     );
@@ -149,3 +149,4 @@ const FeatureCard = ({ icon, title, description, delay }: any) => (
 );
 
 export default Home;
+
