@@ -35,10 +35,14 @@ const sendBusStartedNotification = async (tripId, busId, collegeId, busNumber, i
             if (doc.data().collegeId === collegeId) studentDocsMap.set(doc.id, doc);
         });
 
-        console.log(`[BusStarted] Unified Query (assigned=${assignedSnap.size}, favorited=${favoriteSnap.size}) found ${studentDocsMap.size} unique students`);
+        console.log(`[BusStarted] Unified Query (assigned=${assignedSnap.size}, favorited=${favoriteSnap.size}) found ${studentDocsMap.size} unique students in college="${collegeId}"`);
 
         if (studentDocsMap.size === 0) {
-            console.log(`[BusStarted] No students found for bus "${queryBusId}"`);
+            console.log(`[BusStarted] No students found for bus "${queryBusId}" in college "${collegeId}"`);
+            // Log some raw data to help debug why no students were matched
+            if (assignedSnap.size > 0) {
+                console.log(`[BusStarted] First assigned student collegeId: "${assignedSnap.docs[0].data().collegeId}"`);
+            }
             return;
         }
 
@@ -507,7 +511,7 @@ const sendStudentAttendanceNotification = async ({ studentId, busId, direction, 
         const student = studentDoc.data();
         if (!student.fcmToken) return;
 
-        const title = direction === 'pickup' ? "Safe Boarding ✅" : "Drop-off Complete ✅";
+        const title = direction === 'pickup' ? "Safe Boarding ✅" : "Dropped Off ✅";
         const body = direction === 'pickup'
             ? `${student.name || 'Your child'} has boarded Bus ${busNumber} safely.`
             : `${student.name || 'Your child'} has been dropped off from Bus ${busNumber} safely.`;

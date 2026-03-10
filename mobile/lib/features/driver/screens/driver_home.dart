@@ -1378,6 +1378,23 @@ class _DriverContentState extends ConsumerState<_DriverContent> {
             originalBusId: widget.originalBusId,
           );
           if (mounted) _startTracking(tripId);
+          
+          // Manual Trigger for Bus Started Notification (Fallback/Double-check)
+          try {
+            await ref.read(apiDataSourceProvider).notifyTripStarted(
+              collegeId: widget.collegeId,
+              busId: widget.busId,
+              tripId: tripId,
+              busNumber: bus.busNumber,
+              driverId: widget.driverId,
+              routeId: widget.routeId,
+              isMaintenance: widget.isMaintenance,
+              originalBusId: widget.originalBusId,
+            );
+          } catch (notifErr) {
+            debugPrint("[DriverHome] Manual start notification failed: $notifErr");
+          }
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Trip started successfully!")),

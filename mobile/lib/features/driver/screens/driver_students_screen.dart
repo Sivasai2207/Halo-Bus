@@ -605,35 +605,35 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
               
               const Divider(height: 32),
               
-              if (student.homeAddress != null && student.homeAddress!.isNotEmpty)
-                _detailRow(Icons.home_outlined, 'Home Address', student.homeAddress!),
+              _detailRow(
+                Icons.home_outlined, 
+                'Home Address', 
+                (student.homeAddress != null && student.homeAddress!.isNotEmpty) ? student.homeAddress! : 'Not Provided'
+              ),
 
-              if (student.parentName != null || student.parentContact != null)
-                _infoSection(
-                  'Parent Details',
-                  student.parentName ?? 'N/A',
-                  student.parentContact,
-                  Icons.person_outline,
-                  Colors.blue,
-                ),
+              _infoSection(
+                'Parent Details',
+                (student.parentName != null && student.parentName!.isNotEmpty) ? student.parentName! : 'N/A',
+                student.parentContact,
+                Icons.person_outline,
+                Colors.blue,
+              ),
 
-              if (student.emergencyContactName1 != null || student.emergencyContactPhone1 != null)
-                _infoSection(
-                  'Emergency Contact 1',
-                  student.emergencyContactName1 ?? 'N/A',
-                  student.emergencyContactPhone1,
-                  Icons.report_problem_outlined,
-                  Colors.orange,
-                ),
+              _infoSection(
+                'Emergency Contact 1',
+                (student.emergencyContactName1 != null && student.emergencyContactName1!.isNotEmpty) ? student.emergencyContactName1! : 'Not Provided',
+                student.emergencyContactPhone1,
+                Icons.report_problem_outlined,
+                Colors.orange,
+              ),
 
-              if (student.emergencyContactName2 != null || student.emergencyContactPhone2 != null)
-                _infoSection(
-                  'Emergency Contact 2',
-                  student.emergencyContactName2 ?? 'N/A',
-                  student.emergencyContactPhone2,
-                  Icons.report_problem_outlined,
-                  Colors.red,
-                ),
+              _infoSection(
+                'Emergency Contact 2',
+                (student.emergencyContactName2 != null && student.emergencyContactName2!.isNotEmpty) ? student.emergencyContactName2! : 'Not Provided',
+                student.emergencyContactPhone2,
+                Icons.report_problem_outlined,
+                Colors.red,
+              ),
 
               if (isLocked)
                 Padding(
