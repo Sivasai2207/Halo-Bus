@@ -602,12 +602,61 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                   onTap: () => _makePhoneCall(student.phone),
                 ),
               _detailRow(Icons.bus_alert, 'Assigned Bus', _getBusLabel(student.assignedBusId, busIdToNumber)),
+              
+              const Divider(height: 32),
+              
+              if (student.homeAddress != null && student.homeAddress!.isNotEmpty)
+                _detailRow(Icons.home_outlined, 'Home Address', student.homeAddress!),
+
+              if (student.parentName != null || student.parentContact != null)
+                _infoSection(
+                  'Parent Details',
+                  student.parentName ?? 'N/A',
+                  student.parentContact,
+                  Icons.person_outline,
+                  Colors.blue,
+                ),
+
+              if (student.emergencyContactName1 != null || student.emergencyContactPhone1 != null)
+                _infoSection(
+                  'Emergency Contact 1',
+                  student.emergencyContactName1 ?? 'N/A',
+                  student.emergencyContactPhone1,
+                  Icons.report_problem_outlined,
+                  Colors.orange,
+                ),
+
+              if (student.emergencyContactName2 != null || student.emergencyContactPhone2 != null)
+                _infoSection(
+                  'Emergency Contact 2',
+                  student.emergencyContactName2 ?? 'N/A',
+                  student.emergencyContactPhone2,
+                  Icons.report_problem_outlined,
+                  Colors.red,
+                ),
+
               if (isLocked)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'This record is verified and locked for today.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This record is verified and locked for today.',
+                            style: TextStyle(fontSize: 12, color: Colors.amber[900], fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               const SizedBox(height: 32),
@@ -725,6 +774,51 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
       ),
     );
   }
+
+  Widget _infoSection(String title, String name, String? phone, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.1)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.1)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      if (phone != null && phone.isNotEmpty)
+                        Text(phone, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                  ),
+                ),
+                if (phone != null && phone.isNotEmpty)
+                  IconButton(
+                    icon: Icon(Icons.call, size: 20, color: color),
+                    onPressed: () => _makePhoneCall(phone),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleHandover(UserProfile student, String activeTripId) async {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();

@@ -27,7 +27,22 @@ class UserProfile {
     this.activeBusNumber,
     this.lastBusUpdate,
     this.photoUrl,
+    this.homeAddress,
+    this.parentName,
+    this.parentContact,
+    this.emergencyContactName1,
+    this.emergencyContactPhone1,
+    this.emergencyContactName2,
+    this.emergencyContactPhone2,
   });
+
+  final String? homeAddress;
+  final String? parentName;
+  final String? parentContact;
+  final String? emergencyContactName1;
+  final String? emergencyContactPhone1;
+  final String? emergencyContactName2;
+  final String? emergencyContactPhone2;
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -46,6 +61,13 @@ class UserProfile {
         ? (data['lastBusUpdate'] as Timestamp).toDate() 
         : (data['lastBusUpdate'] != null ? DateTime.tryParse(data['lastBusUpdate'].toString()) : null),
       photoUrl: data['photoUrl']?.toString(),
+      homeAddress: data['homeAddress']?.toString(),
+      parentName: data['parentName']?.toString(),
+      parentContact: (data['parentContact'] ?? data['parentPhone'])?.toString(),
+      emergencyContactName1: data['emergencyContactName1']?.toString(),
+      emergencyContactPhone1: data['emergencyContactPhone1']?.toString(),
+      emergencyContactName2: data['emergencyContactName2']?.toString(),
+      emergencyContactPhone2: data['emergencyContactPhone2']?.toString(),
     );
   }
 
@@ -63,6 +85,13 @@ class UserProfile {
       activeBusNumber: json['activeBusNumber']?.toString(),
       lastBusUpdate: json['lastBusUpdate'] != null ? DateTime.tryParse(json['lastBusUpdate'].toString()) : null,
       photoUrl: json['photoUrl']?.toString(),
+      homeAddress: json['homeAddress']?.toString(),
+      parentName: json['parentName']?.toString(),
+      parentContact: (json['parentContact'] ?? json['parentPhone'])?.toString(),
+      emergencyContactName1: json['emergencyContactName1']?.toString(),
+      emergencyContactPhone1: json['emergencyContactPhone1']?.toString(),
+      emergencyContactName2: json['emergencyContactName2']?.toString(),
+      emergencyContactPhone2: json['emergencyContactPhone2']?.toString(),
     );
   }
 }

@@ -1025,6 +1025,13 @@ async function getBusStudents(req, res) {
                 rollNumber: data.rollNumber || '',
                 assignedBusId: data.assignedBusId || null,
                 photoUrl: data.photoUrl || null,
+                homeAddress: data.homeAddress || '',
+                parentName: data.parentName || '',
+                parentContact: data.parentContact || '',
+                emergencyContactName1: data.emergencyContactName1 || '',
+                emergencyContactPhone1: data.emergencyContactPhone1 || '',
+                emergencyContactName2: data.emergencyContactName2 || '',
+                emergencyContactPhone2: data.emergencyContactPhone2 || '',
             };
         });
 
