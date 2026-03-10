@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const driverController = require('../controllers/driverController');
 const {
     getDriverBuses,
     searchDriverBuses,
@@ -17,7 +18,19 @@ const {
     notifyStudentAttendance,
     generateHandoverOTP,
     verifyHandoverOTP
-} = require('../controllers/driverController');
+} = driverController;
+
+// Debug Logs for Vercel
+console.log('[DriverRoutes] Controller Functions Check:');
+[
+    'getDriverBuses', 'searchDriverBuses', 'updateBusLocation', 'startTrip', 'endTrip',
+    'saveTripHistory', 'historyUpload', 'checkProximity', 'markPickup', 'markDropoff',
+    'getTripAttendance', 'getBusStudents', 'getTodayAttendance', 'notifyStudentAttendance',
+    'generateHandoverOTP', 'verifyHandoverOTP'
+].forEach(fn => {
+    console.log(` - ${fn}: ${typeof driverController[fn]}`);
+});
+
 const { sendStopEventNotification, sendTripEndedNotification } = require('../controllers/notificationController');
 const { protect, authorize } = require('../middleware/auth');
 const tenantIsolation = require('../middleware/tenantIsolation');
