@@ -19,7 +19,12 @@ const bcrypt = require('bcryptjs');
 // @access  Private (College Admin)
 const createStudent = async (req, res) => {
     try {
-        const { name, registerNumber, rollNumber, email, phone } = req.body;
+        const {
+            name, registerNumber, rollNumber, email, phone,
+            class: className, section, homeAddress, parentName, parentContact,
+            emergencyContactName1, emergencyContactPhone1,
+            emergencyContactName2, emergencyContactPhone2
+        } = req.body;
         const collegeId = req.collegeId;
 
         if (!name || !registerNumber || !email) {
@@ -60,6 +65,15 @@ const createStudent = async (req, res) => {
             rollNumber: String(rollNumber || '').trim(),
             email: String(email || '').toLowerCase().trim(),
             phone: String(phone || '').trim(),
+            class: String(className || '').trim(),
+            section: String(section || '').trim(),
+            homeAddress: String(homeAddress || '').trim(),
+            parentName: String(parentName || '').trim(),
+            parentContact: String(parentContact || '').trim(),
+            emergencyContactName1: String(emergencyContactName1 || '').trim(),
+            emergencyContactPhone1: String(emergencyContactPhone1 || '').trim(),
+            emergencyContactName2: String(emergencyContactName2 || '').trim(),
+            emergencyContactPhone2: String(emergencyContactPhone2 || '').trim(),
             passwordHash: null, // Will be set on first login
             isFirstLogin: true,
             createdAt: new Date().toISOString()
@@ -119,7 +133,12 @@ const getStudents = async (req, res) => {
 const updateStudent = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, registerNumber, rollNumber, email, phone } = req.body;
+        const {
+            name, registerNumber, rollNumber, email, phone,
+            class: className, section, homeAddress, parentName, parentContact,
+            emergencyContactName1, emergencyContactPhone1,
+            emergencyContactName2, emergencyContactPhone2
+        } = req.body;
         const collegeId = req.collegeId;
 
         const studentRef = db.collection('students').doc(id);
@@ -135,6 +154,15 @@ const updateStudent = async (req, res) => {
         if (rollNumber !== undefined) updates.rollNumber = String(rollNumber).trim();
         if (email) updates.email = String(email).toLowerCase().trim();
         if (phone !== undefined) updates.phone = String(phone).trim();
+        if (className !== undefined) updates.class = String(className).trim();
+        if (section !== undefined) updates.section = String(section).trim();
+        if (homeAddress !== undefined) updates.homeAddress = String(homeAddress).trim();
+        if (parentName !== undefined) updates.parentName = String(parentName).trim();
+        if (parentContact !== undefined) updates.parentContact = String(parentContact).trim();
+        if (emergencyContactName1 !== undefined) updates.emergencyContactName1 = String(emergencyContactName1).trim();
+        if (emergencyContactPhone1 !== undefined) updates.emergencyContactPhone1 = String(emergencyContactPhone1).trim();
+        if (emergencyContactName2 !== undefined) updates.emergencyContactName2 = String(emergencyContactName2).trim();
+        if (emergencyContactPhone2 !== undefined) updates.emergencyContactPhone2 = String(emergencyContactPhone2).trim();
 
         await studentRef.update(updates);
 
@@ -193,7 +221,12 @@ const createBulkStudents = async (req, res) => {
 
         for (const student of students) {
             try {
-                const { name, registerNumber, rollNumber, email, phone } = student;
+                const {
+                    name, registerNumber, rollNumber, email, phone,
+                    class: className, section, homeAddress, parentName, parentContact,
+                    emergencyContactName1, emergencyContactPhone1,
+                    emergencyContactName2, emergencyContactPhone2
+                } = student;
 
                 if (!name || !registerNumber || !email) {
                     results.errors.push({ student, error: 'Missing required fields (name, registerNumber, email)' });
@@ -227,6 +260,15 @@ const createBulkStudents = async (req, res) => {
                     rollNumber: String(rollNumber || '').trim(),
                     email: String(email || '').toLowerCase().trim(),
                     phone: String(phone || '').trim(),
+                    class: String(className || '').trim(),
+                    section: String(section || '').trim(),
+                    homeAddress: String(homeAddress || '').trim(),
+                    parentName: String(parentName || '').trim(),
+                    parentContact: String(parentContact || '').trim(),
+                    emergencyContactName1: String(emergencyContactName1 || '').trim(),
+                    emergencyContactPhone1: String(emergencyContactPhone1 || '').trim(),
+                    emergencyContactName2: String(emergencyContactName2 || '').trim(),
+                    emergencyContactPhone2: String(emergencyContactPhone2 || '').trim(),
                     passwordHash: null,
                     isFirstLogin: true,
                     createdAt: new Date().toISOString()

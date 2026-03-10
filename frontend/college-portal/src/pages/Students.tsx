@@ -12,6 +12,15 @@ interface Student {
     rollNumber: string;
     email: string;
     phone: string;
+    class: string;
+    section: string;
+    homeAddress: string;
+    parentName: string;
+    parentContact: string;
+    emergencyContactName1: string;
+    emergencyContactPhone1: string;
+    emergencyContactName2: string;
+    emergencyContactPhone2: string;
 }
 
 const Students = () => {
@@ -27,7 +36,16 @@ const Students = () => {
         registerNumber: '',
         rollNumber: '',
         email: '',
-        phone: ''
+        phone: '',
+        class: '',
+        section: '',
+        homeAddress: '',
+        parentName: '',
+        parentContact: '',
+        emergencyContactName1: '',
+        emergencyContactPhone1: '',
+        emergencyContactName2: '',
+        emergencyContactPhone2: ''
     });
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState('');
@@ -76,7 +94,12 @@ const Students = () => {
                 setSuccessMessage(`Student ${newStudent.name} created successfully!`);
             }
 
-            setNewStudent({ name: '', registerNumber: '', rollNumber: '', email: '', phone: '' });
+            setNewStudent({
+                name: '', registerNumber: '', rollNumber: '', email: '', phone: '',
+                class: '', section: '', homeAddress: '', parentName: '', parentContact: '',
+                emergencyContactName1: '', emergencyContactPhone1: '',
+                emergencyContactName2: '', emergencyContactPhone2: ''
+            });
             setIsEditMode(false);
             setEditingStudent(null);
             fetchStudents();
@@ -98,7 +121,16 @@ const Students = () => {
             registerNumber: student.registerNumber,
             rollNumber: student.rollNumber || '',
             email: student.email,
-            phone: student.phone || ''
+            phone: student.phone || '',
+            class: student.class || '',
+            section: student.section || '',
+            homeAddress: student.homeAddress || '',
+            parentName: student.parentName || '',
+            parentContact: student.parentContact || '',
+            emergencyContactName1: student.emergencyContactName1 || '',
+            emergencyContactPhone1: student.emergencyContactPhone1 || '',
+            emergencyContactName2: student.emergencyContactName2 || '',
+            emergencyContactPhone2: student.emergencyContactPhone2 || ''
         });
         setIsEditMode(true);
         setIsModalOpen(true);
@@ -129,8 +161,8 @@ const Students = () => {
     const downloadStudentTemplate = async () => {
         // Dynamically import XLSX only when needed
         const XLSX = await import('xlsx');
-        const headers = [['Name', 'Register Number', 'Roll Number', 'Email', 'Phone']];
-        const data = [['John Doe', 'REG001', 'R001', 'john@example.com', '9876543210']];
+        const headers = [['Name', 'Register Number', 'Roll Number', 'Email', 'Phone', 'Class', 'Section', 'Home Address', 'Parent Name', 'Parent Contact', 'Emergency Contact 1 Name', 'Emergency Contact 1 Phone', 'Emergency Contact 2 Name', 'Emergency Contact 2 Phone']];
+        const data = [['John Doe', 'REG001', 'R001', 'john@example.com', '9876543210', 'X', 'A', '123 Main St, City', 'Robert Doe', '9876543211', 'Mary Doe', '9876543212', 'Brother', '9876543213']];
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet([...headers, ...data]);
@@ -142,13 +174,22 @@ const Students = () => {
     const downloadStudentList = async () => {
         // Dynamically import XLSX only when needed
         const XLSX = await import('xlsx');
-        const headers = [['Name', 'Register Number', 'Roll Number', 'Email', 'Phone']];
+        const headers = [['Name', 'Register Number', 'Roll Number', 'Email', 'Phone', 'Class', 'Section', 'Home Address', 'Parent Name', 'Parent Contact', 'Emergency Contact 1 Name', 'Emergency Contact 1 Phone', 'Emergency Contact 2 Name', 'Emergency Contact 2 Phone']];
         const data = filteredStudents.map(s => [
             s.name,
             s.registerNumber,
             s.rollNumber || '',
             s.email,
-            s.phone || ''
+            s.phone || '',
+            s.class || '',
+            s.section || '',
+            s.homeAddress || '',
+            s.parentName || '',
+            s.parentContact || '',
+            s.emergencyContactName1 || '',
+            s.emergencyContactPhone1 || '',
+            s.emergencyContactName2 || '',
+            s.emergencyContactPhone2 || ''
         ]);
 
         const wb = XLSX.utils.book_new();
@@ -175,7 +216,16 @@ const Students = () => {
                 registerNumber: String(row['Register Number'] || row['registerNumber'] || ''),
                 rollNumber: String(row['Roll Number'] || row['rollNumber'] || ''),
                 email: String(row['Email'] || row['email'] || ''),
-                phone: String(row['Phone'] || row['phone'] || '')
+                phone: String(row['Phone'] || row['phone'] || ''),
+                class: String(row['Class'] || row['class'] || ''),
+                section: String(row['Section'] || row['section'] || ''),
+                homeAddress: String(row['Home Address'] || row['homeAddress'] || ''),
+                parentName: String(row['Parent Name'] || row['parentName'] || ''),
+                parentContact: String(row['Parent Contact'] || row['parentContact'] || ''),
+                emergencyContactName1: String(row['Emergency Contact 1 Name'] || row['emergencyContact1Name'] || ''),
+                emergencyContactPhone1: String(row['Emergency Contact 1 Phone'] || row['emergencyContact1Phone'] || ''),
+                emergencyContactName2: String(row['Emergency Contact 2 Name'] || row['emergencyContact2Name'] || ''),
+                emergencyContactPhone2: String(row['Emergency Contact 2 Phone'] || row['emergencyContact2Phone'] || '')
             })).filter(s => s.name && s.registerNumber && s.email);
 
             if (mappedData.length === 0) {
@@ -270,7 +320,12 @@ const Students = () => {
                             onClick={() => {
                                 setIsEditMode(false);
                                 setEditingStudent(null);
-                                setNewStudent({ name: '', registerNumber: '', rollNumber: '', email: '', phone: '' });
+                                setNewStudent({
+                                    name: '', registerNumber: '', rollNumber: '', email: '', phone: '',
+                                    class: '', section: '', homeAddress: '', parentName: '', parentContact: '',
+                                    emergencyContactName1: '', emergencyContactPhone1: '',
+                                    emergencyContactName2: '', emergencyContactPhone2: ''
+                                });
                                 setIsModalOpen(true);
                             }}
                             className="flex items-center gap-2 px-6 py-2 btn-premium btn-primary-gradient text-white rounded-xl font-bold shadow-lg transition-all"
@@ -349,27 +404,57 @@ const Students = () => {
                                         <button onClick={() => handleResetPassword(student.studentId, student.name)} className="p-2 text-orange-600 hover:bg-orange-50 rounded-xl" title="Reset Password"><Key size={16} /></button>
                                     </div>
                                 </div>
-                                <div className="space-y-2 text-sm relative z-10 mt-6 pt-5 border-t border-slate-50">
+                                <div className="space-y-3 text-sm relative z-10 mt-6 pt-5 border-t border-slate-50">
                                     <div className="flex items-center gap-3 text-slate-600 font-medium">
                                         <div className="p-1.5 bg-slate-50 rounded-lg">
                                             <Mail size={12} className="text-slate-400" />
                                         </div>
                                         {student.email || 'No Email'}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 mt-4">
-                                        {student.rollNumber && (
-                                            <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase bg-slate-50/50 px-3 py-1.5 rounded-lg border border-slate-100/50">
-                                                <Hash size={12} className="text-slate-400" />
-                                                {student.rollNumber}
-                                            </div>
-                                        )}
-                                        {student.phone && (
-                                            <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase bg-slate-50/50 px-3 py-1.5 rounded-lg border border-slate-100/50">
-                                                <Phone size={12} className="text-slate-400" />
-                                                {student.phone}
-                                            </div>
-                                        )}
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase bg-slate-50/50 px-3 py-1.5 rounded-lg border border-slate-100/50">
+                                            <Hash size={12} className="text-slate-400" />
+                                            {student.rollNumber || 'No Roll No'}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase bg-slate-50/50 px-3 py-1.5 rounded-lg border border-slate-100/50">
+                                            <Phone size={12} className="text-slate-400" />
+                                            {student.phone || 'No Phone'}
+                                        </div>
                                     </div>
+
+                                    {(student.class || student.section) && (
+                                        <div className="flex items-center gap-2 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100/50 w-fit">
+                                            CLASS {student.class || '-'} • SEC {student.section || '-'}
+                                        </div>
+                                    )}
+
+                                    {student.homeAddress && (
+                                        <div className="text-[11px] text-slate-500 bg-slate-50/50 p-2 rounded-lg border border-slate-100/50 line-clamp-2">
+                                            <span className="font-bold text-slate-400 uppercase mr-1">Address:</span>
+                                            {student.homeAddress}
+                                        </div>
+                                    )}
+
+                                    {(student.parentName || student.parentContact) && (
+                                        <div className="p-2 border border-slate-100 rounded-lg bg-slate-50/30">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Parent Details</p>
+                                            <div className="flex justify-between items-center text-[11px]">
+                                                <span className="font-medium text-slate-700">{student.parentName || 'N/A'}</span>
+                                                <span className="text-slate-500">{student.parentContact || ''}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(student.emergencyContactName1 || student.emergencyContactPhone1) && (
+                                        <div className="p-2 border border-orange-100 rounded-lg bg-orange-50/30">
+                                            <p className="text-[10px] font-bold text-orange-400 uppercase mb-1">Emergency 1</p>
+                                            <div className="flex justify-between items-center text-[11px]">
+                                                <span className="font-medium text-slate-700">{student.emergencyContactName1 || 'N/A'}</span>
+                                                <span className="text-slate-500">{student.emergencyContactPhone1 || ''}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-emerald-50/30 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             </motion.div>
@@ -393,7 +478,7 @@ const Students = () => {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+                            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-2xl font-bold text-slate-800">{isEditMode ? 'Edit Student' : 'Add New Student'}</h2>
@@ -408,12 +493,43 @@ const Students = () => {
                             ) : (
                                 <form onSubmit={handleCreateStudent} className="space-y-4">
                                     {formError && <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 rounded-lg text-sm">{formError}</div>}
-                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Name *</label><input type="text" value={newStudent.name} onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
-                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Register Number *</label><input type="text" value={newStudent.registerNumber} onChange={(e) => setNewStudent({ ...newStudent, registerNumber: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
-                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Roll Number</label><input type="text" value={newStudent.rollNumber} onChange={(e) => setNewStudent({ ...newStudent, rollNumber: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
-                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Email *</label><input type="email" value={newStudent.email} onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
-                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label><input type="tel" value={newStudent.phone} onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
-                                    <motion.button type="submit" disabled={formLoading} className="w-full mt-6 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg shadow-emerald-200 disabled:opacity-50">{formLoading ? 'Saving...' : isEditMode ? 'Update Student' : 'Create Student'}</motion.button>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Name *</label><input type="text" value={newStudent.name} onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Register Number *</label><input type="text" value={newStudent.registerNumber} onChange={(e) => setNewStudent({ ...newStudent, registerNumber: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Roll Number</label><input type="text" value={newStudent.rollNumber} onChange={(e) => setNewStudent({ ...newStudent, rollNumber: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Class</label><input type="text" value={newStudent.class} onChange={(e) => setNewStudent({ ...newStudent, class: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Section</label><input type="text" value={newStudent.section} onChange={(e) => setNewStudent({ ...newStudent, section: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Email *</label><input type="email" value={newStudent.email} onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label><input type="tel" value={newStudent.phone} onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                    </div>
+
+                                    <div><label className="block text-sm font-semibold text-slate-700 mb-2">Home Address</label><textarea rows={2} value={newStudent.homeAddress} onChange={(e) => setNewStudent({ ...newStudent, homeAddress: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100 resize-none" /></div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Parent Name</label><input type="text" value={newStudent.parentName} onChange={(e) => setNewStudent({ ...newStudent, parentName: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                        <div><label className="block text-sm font-semibold text-slate-700 mb-2">Parent Contact</label><input type="tel" value={newStudent.parentContact} onChange={(e) => setNewStudent({ ...newStudent, parentContact: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100" /></div>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 space-y-4">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Emergency Contacts</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Contact 1 Name</label><input type="text" value={newStudent.emergencyContactName1} onChange={(e) => setNewStudent({ ...newStudent, emergencyContactName1: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                                            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Contact 1 Phone</label><input type="tel" value={newStudent.emergencyContactPhone1} onChange={(e) => setNewStudent({ ...newStudent, emergencyContactPhone1: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Contact 2 Name</label><input type="text" value={newStudent.emergencyContactName2} onChange={(e) => setNewStudent({ ...newStudent, emergencyContactName2: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                                            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Contact 2 Phone</label><input type="tel" value={newStudent.emergencyContactPhone2} onChange={(e) => setNewStudent({ ...newStudent, emergencyContactPhone2: e.target.value })} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" /></div>
+                                        </div>
+                                    </div>
+
+                                    <motion.button type="submit" disabled={formLoading} className="w-full mt-6 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg shadow-emerald-200 disabled:opacity-50 tracking-wide font-bold">{formLoading ? 'Saving...' : isEditMode ? 'Update Student' : 'Create Student'}</motion.button>
                                 </form>
                             )}
                         </motion.div>
@@ -441,7 +557,7 @@ const Students = () => {
                             <div className="flex items-center justify-between mb-6 shrink-0">
                                 <div>
                                     <h2 className="text-2xl font-bold text-slate-800">Bulk Upload Students</h2>
-                                    <p className="text-slate-500 text-sm">Upload Excel with Name, Register Number, Roll Number, Email, Phone</p>
+                                    <p className="text-slate-500 text-sm">Upload Excel with all student details (Template columns: Name, Register Number, Roll Number, Email, Phone, Class, Section, Address, Parent Name, Parent Contact, Emergency 1 & 2)</p>
                                 </div>
                                 <button onClick={() => setIsBulkModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} className="text-slate-500" /></button>
                             </div>
@@ -471,7 +587,7 @@ const Students = () => {
                                                 <div className="flex-1 overflow-auto border border-slate-200 rounded-xl">
                                                     <table className="w-full text-left text-sm">
                                                         <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
-                                                            <tr><th className="p-3 w-10"></th><th className="p-3 font-semibold">Name</th><th className="p-3 font-semibold">Register No</th><th className="p-3 font-semibold">Roll No</th><th className="p-3 font-semibold">Email</th><th className="p-3 font-semibold">Phone</th></tr>
+                                                            <tr><th className="p-3 w-10"></th><th className="p-3 font-semibold">Name</th><th className="p-3 font-semibold">Register No</th><th className="p-3 font-semibold">Roll No</th><th className="p-3 font-semibold">Email</th><th className="p-3 font-semibold">Phone</th><th className="p-3 font-semibold">Class</th><th className="p-3 font-semibold">Sec</th><th className="p-3 font-semibold">Address</th><th className="p-3 font-semibold">Parent Name</th><th className="p-3 font-semibold">Parent Contact</th><th className="p-3 font-semibold text-orange-600">E1 Name</th><th className="p-3 font-semibold text-orange-600">E1 Phone</th><th className="p-3 font-semibold text-red-600">E2 Name</th><th className="p-3 font-semibold text-red-600">E2 Phone</th></tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
                                                             {bulkPreview.map((row, idx) => (
@@ -482,6 +598,15 @@ const Students = () => {
                                                                     <td className="p-3 text-slate-600">{row.rollNumber}</td>
                                                                     <td className="p-3 text-slate-600">{row.email}</td>
                                                                     <td className="p-3 text-slate-600">{row.phone}</td>
+                                                                    <td className="p-3 text-slate-600">{row.class}</td>
+                                                                    <td className="p-3 text-slate-600">{row.section}</td>
+                                                                    <td className="p-3 text-slate-600 truncate max-w-[100px]">{row.homeAddress}</td>
+                                                                    <td className="p-3 text-slate-600">{row.parentName}</td>
+                                                                    <td className="p-3 text-slate-600">{row.parentContact}</td>
+                                                                    <td className="p-3 text-slate-600">{row.emergencyContactName1}</td>
+                                                                    <td className="p-3 text-slate-600">{row.emergencyContactPhone1}</td>
+                                                                    <td className="p-3 text-slate-600">{row.emergencyContactName2}</td>
+                                                                    <td className="p-3 text-slate-600">{row.emergencyContactPhone2}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
