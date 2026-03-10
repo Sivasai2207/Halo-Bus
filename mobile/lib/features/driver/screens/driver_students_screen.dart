@@ -527,198 +527,230 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 5)],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ProfileAvatar(
-                    photoUrl: student.photoUrl,
-                    name: student.name,
-                    radius: 42,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(student.name ?? 'Unknown Student',
-                            style: AppTypography.h3),
-                        Text(student.email, style: AppTypography.bodyMd),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (activeTripId != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isAttended
-                        ? (direction == 'pickup' ? Colors.green[50] : Colors.blue[50])
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isLocked ? Icons.lock : (isAttended ? Icons.check_circle : Icons.pending),
-                        size: 16,
-                        color: isAttended
-                            ? (direction == 'pickup' ? Colors.green : Colors.blue)
-                            : Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isLocked 
-                            ? 'Verified'
-                            : (isAttended
-                                ? (direction == 'pickup' ? 'Picked Up ✓' : 'Dropped Off ✓')
-                                : 'Pending'),
-                        style: TextStyle(
-                          color: isAttended
-                              ? (direction == 'pickup' ? Colors.green : Colors.blue)
-                              : Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 24),
-              if (student.phone != null)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.phone, color: AppColors.primary),
-                  title: Text(student.phone!),
-                  onTap: () => _makePhoneCall(student.phone),
-                ),
-              _detailRow(Icons.bus_alert, 'Assigned Bus', _getBusLabel(student.assignedBusId, busIdToNumber)),
-              
-              const Divider(height: 32),
-              
-              _detailRow(
-                Icons.home_outlined, 
-                'Home Address', 
-                (student.homeAddress != null && student.homeAddress!.isNotEmpty) ? student.homeAddress! : 'Not Provided'
-              ),
-
-              _infoSection(
-                'Parent Details',
-                (student.parentName != null && student.parentName!.isNotEmpty) ? student.parentName! : 'N/A',
-                student.parentContact,
-                Icons.person_outline,
-                Colors.blue,
-              ),
-
-              _infoSection(
-                'Emergency Contact 1',
-                (student.emergencyContactName1 != null && student.emergencyContactName1!.isNotEmpty) ? student.emergencyContactName1! : 'Not Provided',
-                student.emergencyContactPhone1,
-                Icons.report_problem_outlined,
-                Colors.orange,
-              ),
-
-              _infoSection(
-                'Emergency Contact 2',
-                (student.emergencyContactName2 != null && student.emergencyContactName2!.isNotEmpty) ? student.emergencyContactName2! : 'Not Provided',
-                student.emergencyContactPhone2,
-                Icons.report_problem_outlined,
-                Colors.red,
-              ),
-
-              if (isLocked)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primary.withOpacity(0.1), width: 4),
+                      ),
+                      child: ProfileAvatar(
+                        photoUrl: student.photoUrl,
+                        name: student.name,
+                        radius: 42,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(student.name ?? 'Unknown Student', style: AppTypography.h2.copyWith(fontWeight: FontWeight.bold)),
+                          Text(student.email, style: AppTypography.bodyMd.copyWith(color: Colors.grey[600])),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                if (activeTripId != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.amber[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber[200]!),
+                      color: isAttended
+                          ? (direction == 'pickup' ? Colors.green[50] : Colors.blue[50])
+                          : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isAttended
+                            ? (direction == 'pickup' ? Colors.green[200]! : Colors.blue[200]!)
+                            : Colors.grey[200]!,
+                        width: 1,
+                      ),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.info_outline, size: 16, color: Colors.amber),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'This record is verified and locked for today.',
-                            style: TextStyle(fontSize: 12, color: Colors.amber[900], fontStyle: FontStyle.italic),
+                        Icon(
+                          isLocked ? Icons.verified : (isAttended ? Icons.check_circle : Icons.watch_later_outlined),
+                          size: 18,
+                          color: isAttended
+                              ? (direction == 'pickup' ? Colors.green[700] : Colors.blue[700])
+                              : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          isLocked 
+                              ? 'Verified'
+                              : (isAttended
+                                  ? (direction == 'pickup' ? 'Picked Up' : 'Dropped Off')
+                                  : 'Pending Record'),
+                          style: TextStyle(
+                            color: isAttended
+                                ? (direction == 'pickup' ? Colors.green[700] : Colors.blue[700])
+                                : Colors.grey[700],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ],
                     ),
                   ),
+                const SizedBox(height: 28),
+                if (student.phone != null)
+                  _detailRow(Icons.phone_android, 'Personal Contact', student.phone!),
+                
+                _detailRow(Icons.directions_bus_filled_outlined, 'Assigned Vehicle', _getBusLabel(student.assignedBusId, busIdToNumber, isFull: true)),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(),
                 ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _makePhoneCall(student.phone);
-                      },
-                      icon: const Icon(Icons.call),
-                      label: const Text('Call'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                
+                _detailRow(
+                  Icons.location_on_outlined, 
+                  'Home Address', 
+                  (student.homeAddress != null && student.homeAddress!.isNotEmpty) ? student.homeAddress! : 'Address Not Provided'
+                ),
+
+                _infoSection(
+                  'Parent / Guardian',
+                  (student.parentName != null && student.parentName!.isNotEmpty) ? student.parentName! : 'Contact Not Set',
+                  student.parentContact,
+                  Icons.person_pin_circle_outlined,
+                  Colors.indigo,
+                ),
+
+                _infoSection(
+                  'Emergency Contact 1',
+                  (student.emergencyContactName1 != null && student.emergencyContactName1!.isNotEmpty) ? student.emergencyContactName1! : 'Contact 1 Not Set',
+                  student.emergencyContactPhone1,
+                  Icons.shield_outlined,
+                  Colors.orange,
+                  isHandoverEnabled: activeTripId != null && direction == 'dropoff' && !isLocked,
+                  onHandover: () {
+                    Navigator.pop(context);
+                    _handleHandover(student, activeTripId!, initialName: student.emergencyContactName1, initialPhone: student.emergencyContactPhone1);
+                  },
+                ),
+
+                _infoSection(
+                  'Emergency Contact 2',
+                  (student.emergencyContactName2 != null && student.emergencyContactName2!.isNotEmpty) ? student.emergencyContactName2! : 'Contact 2 Not Set',
+                  student.emergencyContactPhone2,
+                  Icons.security_outlined,
+                  Colors.red,
+                  isHandoverEnabled: activeTripId != null && direction == 'dropoff' && !isLocked,
+                  onHandover: () {
+                    Navigator.pop(context);
+                    _handleHandover(student, activeTripId!, initialName: student.emergencyContactName2, initialPhone: student.emergencyContactPhone2);
+                  },
+                ),
+
+                if (isLocked)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_rounded, color: Colors.amber, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Daily attendance verified. This record is locked.',
+                            style: TextStyle(fontSize: 13, color: Colors.amber[900], fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (activeTripId != null) ...[
-                    const SizedBox(width: 12),
+                
+                const SizedBox(height: 32),
+                
+                Row(
+                  children: [
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: isLocked ? null : () {
+                      child: OutlinedButton.icon(
+                        onPressed: () {
                           Navigator.pop(context);
-                          _onAttendanceChanged(student, !isAttended, direction, activeTripId);
+                          _makePhoneCall(student.phone);
                         },
-                        icon: Icon(isAttended ? Icons.remove_circle_outline : Icons.check_circle_outline),
-                        label: Text(isAttended ? 'Remove Marking' : (direction == 'pickup' ? 'Pick Up' : 'Drop Off')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLocked ? Colors.grey[300] : (isAttended ? Colors.red[50] : (direction == 'pickup' ? Colors.green : Colors.blue)),
-                          foregroundColor: isLocked ? Colors.grey[600] : (isAttended ? Colors.red : Colors.white),
+                        icon: const Icon(Icons.call_rounded),
+                        label: const Text('Call Student'),
+                        style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                       ),
                     ),
+                    if (activeTripId != null) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: isLocked ? null : () {
+                            Navigator.pop(context);
+                            _onAttendanceChanged(student, !isAttended, direction, activeTripId);
+                          },
+                          icon: Icon(isAttended ? Icons.undo_rounded : Icons.check_circle_rounded),
+                          label: Text(isAttended ? 'Reset' : (direction == 'pickup' ? 'Mark Pickup' : 'Mark Dropoff')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isLocked ? Colors.grey[300] : (isAttended ? Colors.red[50] : (direction == 'pickup' ? Colors.green[600] : Colors.blue[600])),
+                            foregroundColor: isLocked ? Colors.grey[600] : (isAttended ? Colors.red : Colors.white),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: isLocked || isAttended ? 0 : 2,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-              if (activeTripId != null && direction == 'dropoff' && !isLocked) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _handleHandover(student, activeTripId);
-                    },
-                    icon: const Icon(Icons.handshake_outlined),
-                    label: const Text('Handover to neighbor (OTP)'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: const BorderSide(color: Colors.orange),
-                      foregroundColor: Colors.orange[800],
+                ),
+                if (activeTripId != null && direction == 'dropoff' && !isLocked) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _handleHandover(student, activeTripId);
+                      },
+                      icon: const Icon(Icons.handshake_rounded),
+                      label: const Text('Handover to other (OTP Verification)'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        foregroundColor: Colors.orange[800],
+                        backgroundColor: Colors.orange[50],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         );
       },
@@ -775,7 +807,7 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
     );
   }
 
-  Widget _infoSection(String title, String name, String? phone, IconData icon, Color color) {
+  Widget _infoSection(String title, String name, String? phone, IconData icon, Color color, {VoidCallback? onHandover, bool isHandoverEnabled = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -804,13 +836,29 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
                     ],
                   ),
                 ),
-                if (phone != null && phone.isNotEmpty)
+                if (phone != null && phone.isNotEmpty) ...[
                   IconButton(
-                    icon: Icon(Icons.call, size: 20, color: color),
+                    icon: Icon(Icons.call, size: 20, color: color.withOpacity(0.7)),
                     onPressed: () => _makePhoneCall(phone),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
+                  if (isHandoverEnabled) ...[
+                    const SizedBox(width: 12),
+                    InkWell(
+                      onTap: onHandover,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: color.withOpacity(0.3)),
+                        ),
+                        child: Icon(Icons.handshake_outlined, size: 20, color: color),
+                      ),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),
@@ -819,20 +867,22 @@ class _DriverStudentsScreenState extends ConsumerState<DriverStudentsScreen> {
     );
   }
 
-  void _handleHandover(UserProfile student, String activeTripId) async {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
+  void _handleHandover(UserProfile student, String activeTripId, {String? initialName, String? initialPhone}) async {
+    final nameController = TextEditingController(text: initialName);
+    final phoneController = TextEditingController(text: initialPhone);
 
+    // If both are provided, we can either skip the dialog or just show it pre-filled
+    // Given the user wants a "checkbox to drop off", showing a quick confirmation or pre-filled dialog is safest.
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Neighbor Details'),
+        title: Text(initialName != null ? 'Confirm Handover' : 'Neighbor Details'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Neighbor Name'),
+              decoration: const InputDecoration(labelText: 'Recipient Name'),
             ),
             const SizedBox(height: 16),
             TextField(
